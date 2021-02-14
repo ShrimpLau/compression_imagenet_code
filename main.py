@@ -17,6 +17,13 @@ import torchvision.models as models
 from torch.autograd import Variable
 
 import gradient_reducers
+from timer import Timer
+
+def metric(*args, **kwargs):
+    if True == 0:
+        log_metric(*args, **kwargs)
+
+timer = Timer(verbosity_level=2, log_fn=metric)
 
 imagenet_config = {
     "name": "imagenet",
@@ -96,15 +103,24 @@ def main(args, timing_logging):
     train_loader = _create_data_loader(args)
     reducer = _get_compression_param(args)
     self.model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
     for batch_idx, (data, target) in enumerate(train_data_loader):
         data, target = data.to(args.device), target.to(self.device)
         output = self.model(data)
         loss = self.criterion(output, target)
-        loss.backward()
+        start_time.record() 
+        loss.backward() #we have the gradients
         grad_list = [p.grad for p in model.parameters()]
         for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
             send_bfr.data[:] = grad + memory
         reducer.reduce(send_buffers, grads, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        print ("Time {}".format(start_time.elapsed_time(stop_time)))
+
+    # training done
 
 
 if __name__ == "__main__":
