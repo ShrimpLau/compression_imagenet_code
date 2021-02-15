@@ -38,7 +38,7 @@ def parse_args(parser):
                         help="network type")
     parser.add_argument("--master-ip", type=str, help="Ip address of master")
     parser.add_argument("--rank", type=int, help="Rank of the experiment")
-    parser.add_argument("--num-workers", type=int, 
+    parser.add_argument("--num-workers", type=int, default=4,
                         help="Number of total  workers")
     parser.add_argument("--reducer", type=str,
                         help="tell which reducer to use")
@@ -119,6 +119,8 @@ def main(args, timing_logging):
         stop_time.record() 
         torch.cuda.synchronize()
         print ("Time {}".format(start_time.elapsed_time(stop_time)))
+        if batch_idx == 5:
+            sys.exit(0)
 
     # training done
 
