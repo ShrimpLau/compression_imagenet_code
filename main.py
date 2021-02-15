@@ -38,13 +38,11 @@ def parse_args(parser):
                         help="network type")
     parser.add_argument("--master-ip", type=str, help="Ip address of master")
     parser.add_argument("--rank", type=int, help="Rank of the experiment")
-    parser.add_argument("--num-workers", type=int, default=4,
+    parser.add_argument("--num-workers", type=int, 
                         help="Number of total  workers")
-    parser.add_argument("--reducer", type=str,
-                        help="tell which reducer to use")
     parser.add_argument("--batch-size", type=int, help="Batch size to use")
     parser.add_argument("--dataset-location", type=str, help="Data path")
-    parser.add_argument("--loader-threads", type=int, help="Loader threads")
+    parser.add_argument("--loader-threads", type=int, default=2, help="Loader threads")
     parser.add_argument("--device", type=str, default="cuda:0", 
                         help="GPU to use")
     parser.add_argument("--log-file", type=str, default="Log file")
@@ -92,7 +90,6 @@ def _get_compression_param(args):
 def main(args, timing_logging):
     #Initialize dataset 
     dist.init_process_group(backend="NCCL", init_method=args.master_ip, 
-                            timeout=datetime.timedelta(seconds=120),
                             world_size=args.num_workers, rank=args.rank)
     model = models.__dict__[args.arch]()
     memories = [torch.zeros_like(p) for p in model.parameters()]
@@ -127,8 +124,8 @@ def main(args, timing_logging):
 
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
-    args_logging = os.path.basename(args.log_file).split(".")[0]+"_args_logged.log"
-    timing_logging = os.path.basename(args.log_file).split(".")[0]+"_time_logged.json"
+    log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
+    timing_logging = os.path.basename(args.log_file).split(".")[0]+"_time_logged_{}.json".format(args.device)
     logging.basicConfig(filename=log_file_name)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
