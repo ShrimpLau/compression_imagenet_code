@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import numpy as np
 import argparse
@@ -120,7 +121,7 @@ def main(args, timing_logging):
         torch.cuda.synchronize()
         print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                            args.device))
-        if batch_idx == 5:
+        if batch_idx == 15:
             sys.exit(0)
 
     # training done
