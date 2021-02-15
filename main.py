@@ -103,7 +103,7 @@ def main(args, timing_logging):
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
-    for batch_idx, (data, target) in enumerate(train_data_loader):
+    for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(args.device), target.to(self.device)
         output = self.model(data)
         loss = self.criterion(output, target)
