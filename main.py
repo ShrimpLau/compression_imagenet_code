@@ -114,7 +114,7 @@ def main(args, timing_logging):
         grad_list = [p.grad for p in model.parameters()]
         for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
             send_bfr.data[:] = grad + memory
-        reducer.reduce(send_buffers, grads, memories)
+        reducer.reduce(send_buffers, grad_list, memories)
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
