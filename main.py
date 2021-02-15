@@ -100,7 +100,7 @@ def main(args, timing_logging):
                           weight_decay=0.0001)
     train_loader = _create_data_loader(args)
     reducer = _get_compression_param(args)
-    self.model.train()
+    model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
     for batch_idx, (data, target) in enumerate(train_data_loader):
