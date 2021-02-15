@@ -48,7 +48,7 @@ def parse_args(parser):
     parser.add_argument("--log-file", type=str, default="Log file")
     parser.add_argument("--reducer", type=str, default="RankKReduce", 
                         help="Rank to use")
-    parser.add_argument("--reducer-param", default=None, 
+    parser.add_argument("--reducer-param", type=int, default=None, 
                         help="extra compression parameter if any")
     args = parser.parse_args()
     return args
