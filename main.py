@@ -93,6 +93,7 @@ def main(args, timing_logging):
                             world_size=args.num_workers, rank=args.rank)
     print ("Dist connected")
     model = models.__dict__[args.arch]()
+    model.to(args.device)
     memories = [torch.zeros_like(p) for p in model.parameters()]
     send_buffers = [torch.zeros_like(p) for p in model.parameters()]
 
