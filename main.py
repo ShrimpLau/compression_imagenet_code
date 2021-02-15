@@ -107,7 +107,7 @@ def main(args, timing_logging):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(args.device), target.to(args.device)
         output = model(data)
-        loss = self.criterion(output, target)
+        loss = criterion(output, target)
         start_time.record() 
         loss.backward() #we have the gradients
         grad_list = [p.grad for p in model.parameters()]
