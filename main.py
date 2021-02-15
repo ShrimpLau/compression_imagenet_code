@@ -96,7 +96,8 @@ def main(args, timing_logging):
     model.to(args.device)
     memories = [torch.zeros_like(p) for p in model.parameters()]
     send_buffers = [torch.zeros_like(p) for p in model.parameters()]
-
+     
+    criterion = torch.nn.CrossEntropyLoss().to(args.device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
     train_loader = _create_data_loader(args)
