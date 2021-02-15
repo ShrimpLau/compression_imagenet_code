@@ -105,7 +105,7 @@ def main(args, timing_logging):
     stop_time = torch.cuda.Event(enable_timing=True)
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(args.device), target.to(args.device)
-        output = self.model(data)
+        output = model(data)
         loss = self.criterion(output, target)
         start_time.record() 
         loss.backward() #we have the gradients
