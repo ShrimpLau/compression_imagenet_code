@@ -82,7 +82,7 @@ def _get_compression_param(args):
         reducer = gradient_reducers.RankKReducer(random_seed=42,
                                                   device=args.device,
                                                   timer=timer,
-                                                  n_power_iterations=1,
+                                                  n_power_iterations=0,
                                                   reuse_query=True,
                                                   rank = args.reducer_param)
     return reducer
