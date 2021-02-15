@@ -79,7 +79,7 @@ def _create_data_loader(args):
 
 def _get_compression_param(args):
     if args.reducer == "PowerSGD":
-        reducer = gradient_reducers.RankKReducers(random_seed=42,
+        reducer = gradient_reducers.RankKReducer(random_seed=42,
                                                   device=args.device,
                                                   timer=timer,
                                                   n_power_iterations=1,
@@ -91,6 +91,7 @@ def main(args, timing_logging):
     #Initialize dataset 
     dist.init_process_group(backend="NCCL", init_method=args.master_ip, 
                             world_size=args.num_workers, rank=args.rank)
+    print ("Dist connected")
     model = models.__dict__[args.arch]()
     memories = [torch.zeros_like(p) for p in model.parameters()]
     send_buffers = [torch.zeros_like(p) for p in model.parameters()]
@@ -115,7 +116,8 @@ def main(args, timing_logging):
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
-        print ("Time {}".format(start_time.elapsed_time(stop_time)))
+        print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                           args.device))
         if batch_idx == 5:
             sys.exit(0)
 
