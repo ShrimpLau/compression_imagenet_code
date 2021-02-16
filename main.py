@@ -104,13 +104,16 @@ def main(args, timing_logging):
     criterion = torch.nn.CrossEntropyLoss().to(args.device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
-    train_loader = _create_data_loader(args)
+    # train_loader = _create_data_loader(args)
     reducer = _get_compression_param(args)
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
-    for batch_idx, (data, target) in enumerate(train_loader):
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+    for batch_idx in range(16):
         data, target = data.to(args.device), target.to(args.device)
         output = model(data)
         loss = criterion(output, target)
@@ -127,15 +130,15 @@ def main(args, timing_logging):
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
         if batch_idx == 15:
-            file_uploader = s3_utils.file_uploader("large-scale-compression")
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
-            data_dict['args'] = args
+            data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
             file_name = "out_file_{}.json".format(args.rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
-                                    "/{}/{}".format(args.s3_prefix, file_name))
+                                    "{}/{}".format(args.s3_prefix, file_name))
 
             sys.exit(0)
 
