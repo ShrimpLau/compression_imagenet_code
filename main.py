@@ -18,6 +18,7 @@ import torchvision.models as models
 from torch.autograd import Variable
 
 import gradient_reducers
+import s3_utils
 from timer import Timer
 
 def metric(*args, **kwargs):
@@ -51,6 +52,8 @@ def parse_args(parser):
                         help="Rank to use")
     parser.add_argument("--reducer-param", type=int, default=None, 
                         help="extra compression parameter if any")
+    parser.add_argument("--s3-prefix", type=str, default=None, 
+                        help="s3-prefix to write")
     args = parser.parse_args()
     return args
 
@@ -106,6 +109,7 @@ def main(args, timing_logging):
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(args.device), target.to(args.device)
         output = model(data)
@@ -119,9 +123,20 @@ def main(args, timing_logging):
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
-        print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
-                                           args.device))
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
         if batch_idx == 15:
+            file_uploader = s3_utils.file_uploader("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args
+            data_dict['timing_log'] = time_list
+            file_name = "out_file_{}.json".format(args.rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "/{}/{}".format(args.s3_prefix, file_name))
+
             sys.exit(0)
 
     # training done
