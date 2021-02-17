@@ -40,18 +40,14 @@ def parse_args(parser):
                         help="network type")
     parser.add_argument("--master-ip", type=str, help="Ip address of master")
     parser.add_argument("--rank", type=int, help="Rank of the experiment")
-    parser.add_argument("--num-workers", type=int, 
-                        help="Number of total  workers")
     parser.add_argument("--batch-size", type=int, help="Batch size to use")
     parser.add_argument("--dataset-location", type=str, help="Data path")
     parser.add_argument("--loader-threads", type=int, default=2, help="Loader threads")
     parser.add_argument("--device", type=str, default="cuda:0", 
                         help="GPU to use")
     parser.add_argument("--log-file", type=str, default="Log file")
-    parser.add_argument("--reducer", type=str, default="RankKReduce", 
-                        help="Rank to use")
-    parser.add_argument("--reducer-param", type=int, default=None, 
-                        help="extra compression parameter if any")
+    parser.add_argument("--num-workers", type=int, 
+                        help="Number of total  workers")
     parser.add_argument("--s3-prefix", type=str, default=None, 
                         help="s3-prefix to write")
     args = parser.parse_args()
@@ -118,6 +114,7 @@ def main(args, timing_logging):
         data, target = data.to(args.device), target.to(args.device)
         output = model(data)
         loss = criterion(output, target)
+        torch.cuda.synchronize() #let's sync before starting
         start_time.record() 
         loss.backward() #we have the gradients
         # grad_list = [p.grad for p in model.parameters()]
