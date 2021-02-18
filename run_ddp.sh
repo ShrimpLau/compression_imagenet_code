@@ -3,16 +3,14 @@ master_ip=$1
 rank=$2
 bsize=$3
 dataset_location=$4
-device=$5
-log_file=$6
-num_workers=${7}
-s3_prefix=${8}
+log_file=$5
+num_workers=${6}
+s3_prefix=${7}
 
 echo "$master_ip";
 echo "$rank";
 echo "$bsize";
 echo "$dataset_location";
-echo "$device";
 echo "$log_file";
 echo "$num_workers";
 echo $s3_prefix;
