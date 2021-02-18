@@ -90,7 +90,6 @@ def _create_data_loader(args):
 def main_resnet50(args):
     #Initialize dataset
     
-
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * args.nproc_per_node + args.local_rank
@@ -137,7 +136,7 @@ def main_resnet50(args):
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
 
-            sys.exit(0)
+            # sys.exit(0)
 
 
 def main_resnet101(args):
@@ -189,7 +188,8 @@ def main_resnet101(args):
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
 
-            sys.exit(0)
+            # sys.exit(0)
+
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
     # log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
