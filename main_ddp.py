@@ -50,6 +50,7 @@ def parse_args(parser):
                         help="Number of total  workers")
     parser.add_argument("--s3-prefix", type=str, default=None, 
                         help="s3-prefix to write")
+    parser.add_argument("--node_rank", type=int)
     args = parser.parse_args()
     return args
 
@@ -92,7 +93,7 @@ def main_resnet50(args):
     
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
-    global_rank = args.node_rank * args.nproc_per_node + args.local_rank
+    global_rank = args.node_rank * 4 + args.local_rank
     model = models.__dict__["resnet50"]()
     model.to(assigned_device)
 
@@ -103,7 +104,7 @@ def main_resnet50(args):
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
     # train_loader = _create_data_loader(args)
-    reducer = _get_compression_param(args)
+    #reducer = _get_compression_param(args)
 
     model = torch.nn.parallel.DistributedDataParallel(model,
                                                       device_ids=[args.local_rank],
@@ -135,6 +136,8 @@ def main_resnet50(args):
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
+            print ("Res 50 done")
+            break
 
             # sys.exit(0)
 
@@ -144,7 +147,7 @@ def main_resnet101(args):
     
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
-    global_rank = args.node_rank * args.nproc_per_node + args.local_rank
+    global_rank = args.node_rank * 4 + args.local_rank
     model = models.__dict__["resnet101"]()
     model.to(assigned_device)
 
@@ -155,7 +158,7 @@ def main_resnet101(args):
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
     # train_loader = _create_data_loader(args)
-    reducer = _get_compression_param(args)
+    # reducer = _get_compression_param(args)
 
     model = torch.nn.parallel.DistributedDataParallel(model,
                                                       device_ids=[args.local_rank],
@@ -187,7 +190,8 @@ def main_resnet101(args):
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
-
+            print ("Done res 101")
+            break
             # sys.exit(0)
 
 if __name__ == "__main__":
