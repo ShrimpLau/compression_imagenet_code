@@ -36,15 +36,15 @@ imagenet_config = {
 
 
 def parse_args(parser):
-    parser.add_argument("--arch", default="resnet18", type=str,
-                        help="network type")
-    parser.add_argument("--master-ip", type=str, help="Ip address of master")
-    parser.add_argument("--rank", type=int, help="Rank of the experiment")
+    # parser.add_argument("--arch", default="resnet50", type=str,
+                        # help="network type")
+    # parser.add_argument("--master-ip", type=str, help="Ip address of master")
+    parser.add_argument("--local-rank", type=int, help="Rank of the experiment")
     parser.add_argument("--batch-size", type=int, help="Batch size to use")
     parser.add_argument("--dataset-location", type=str, help="Data path")
     parser.add_argument("--loader-threads", type=int, default=2, help="Loader threads")
-    parser.add_argument("--device", type=str, default="cuda:0", 
-                        help="GPU to use")
+    # parser.add_argument("--device", type=str, default="cuda:0", 
+                        # help="GPU to use")
     parser.add_argument("--log-file", type=str, default="Log file")
     parser.add_argument("--num-workers", type=int, 
                         help="Number of total  workers")
@@ -77,32 +77,38 @@ def _create_data_loader(args):
     return train_loader
 
 
-def _get_compression_param(args):
-    if args.reducer == "PowerSGD":
-        reducer = gradient_reducers.RankKReducer(random_seed=42,
-                                                  device=args.device,
-                                                  timer=timer,
-                                                  n_power_iterations=0,
-                                                  reuse_query=True,
-                                                  rank = args.reducer_param)
-    return reducer
+# def _get_compression_param(args):
+    # if args.reducer == "PowerSGD":
+        # reducer = gradient_reducers.RankKReducer(random_seed=42,
+                                                  # device=args.device,
+                                                  # timer=timer,
+                                                  # n_power_iterations=0,
+                                                  # reuse_query=True,
+                                                  # rank = args.reducer_param)
+    # return reducer
 
-def main(args, timing_logging):
-    #Initialize dataset 
-    dist.init_process_group(backend="NCCL", init_method=args.master_ip, 
-                            world_size=args.num_workers, rank=args.rank)
-    print ("Dist connected")
-    model = models.__dict__[args.arch]()
-    model.to(args.device)
+def main_resnet50(args):
+    #Initialize dataset
+    
+
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * args.nproc_per_node + args.local_rank
+    model = models.__dict__["resnet50"]()
+    model.to(assigned_device)
+
     memories = [torch.zeros_like(p) for p in model.parameters()]
     send_buffers = [torch.zeros_like(p) for p in model.parameters()]
      
-    criterion = torch.nn.CrossEntropyLoss().to(args.device)
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
     # train_loader = _create_data_loader(args)
     reducer = _get_compression_param(args)
-    model = torch.nn.parallel.DistributedDataParallel(model)
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
@@ -111,28 +117,21 @@ def main(args, timing_logging):
     data = torch.randn((args.batch_size, 3, 224, 224))
     target = torch.randint(0,900, [args.batch_size])
     for batch_idx in range(16):
-        data, target = data.to(args.device), target.to(args.device)
+        data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
         torch.cuda.synchronize() #let's sync before starting
         start_time.record() 
         loss.backward() #we have the gradients
-        # grad_list = [p.grad for p in model.parameters()]
-        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
-            # send_bfr.data[:] = grad + memory
-        # reducer.reduce(send_buffers, grad_list, memories)
-        # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
-        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
-                                         # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 15:
+        if batch_idx == 30:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "out_file_{}.json".format(args.rank)
+            file_name = "resnet50_out_file_{}.json".format(global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -140,17 +139,69 @@ def main(args, timing_logging):
 
             sys.exit(0)
 
-    # training done
 
+def main_resnet101(args):
+    #Initialize dataset
+    
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * args.nproc_per_node + args.local_rank
+    model = models.__dict__["resnet101"]()
+    model.to(assigned_device)
 
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    # train_loader = _create_data_loader(args)
+    reducer = _get_compression_param(args)
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+    for batch_idx in range(16):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize() #let's sync before starting
+        start_time.record() 
+        loss.backward() #we have the gradients
+        stop_time.record() 
+        torch.cuda.synchronize()
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet101_out_file_{}.json".format(global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            sys.exit(0)
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
-    log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
-    timing_logging = os.path.basename(args.log_file).split(".")[0]+"_time_logged_{}.json".format(args.device)
-    logging.basicConfig(filename=log_file_name)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info("Arguments: {}".format(args))
+    # log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
+    # timing_logging = os.path.basename(args.log_file).split(".")[0]+"_time_logged_{}.json".format(args.device)
+    # logging.basicConfig(filename=log_file_name)
+    # logger = logging.getLogger()
+    # logger.setLevel(logging.INFO)
+    # logger.info("Arguments: {}".format(args))
+    print ("In If")
     print (args)
-    main(args, timing_logging)
+    dist.init_process_group(backend="NCCL", init_method="env://")
+    print ("Dist connected")
+    main_resnet50(args)
+    main_resnet101(args)
 
