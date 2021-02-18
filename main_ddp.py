@@ -115,7 +115,7 @@ def main_resnet50(args):
     # for batch_idx, (data, target) in enumerate(train_loader):
     data = torch.randn((args.batch_size, 3, 224, 224))
     target = torch.randint(0,900, [args.batch_size])
-    for batch_idx in range(16):
+    for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
@@ -167,7 +167,7 @@ def main_resnet101(args):
     # for batch_idx, (data, target) in enumerate(train_loader):
     data = torch.randn((args.batch_size, 3, 224, 224))
     target = torch.randint(0,900, [args.batch_size])
-    for batch_idx in range(16):
+    for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
