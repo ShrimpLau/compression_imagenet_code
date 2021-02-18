@@ -77,16 +77,16 @@ def _create_data_loader(args):
                                                sampler=sampler)
     return train_loader
 
+def _get_compression_param(reducer_name, device, reducer_param):
+    if reducer_name == "PowerSGD":
+        reducer = gradient_reducers.RankKReducer(random_seed=42,
+                                                  device=device,
+                                                  timer=timer,
+                                                  n_power_iterations=0,
+                                                  reuse_query=True,
+                                                  rank = reducer_param)
+    return reducer
 
-# def _get_compression_param(args):
-    # if args.reducer == "PowerSGD":
-        # reducer = gradient_reducers.RankKReducer(random_seed=42,
-                                                  # device=args.device,
-                                                  # timer=timer,
-                                                  # n_power_iterations=0,
-                                                  # reuse_query=True,
-                                                  # rank = args.reducer_param)
-    # return reducer
 
 def main_resnet50(args):
     #Initialize dataset
@@ -97,9 +97,6 @@ def main_resnet50(args):
     model = models.__dict__["resnet50"]()
     model.to(assigned_device)
 
-    memories = [torch.zeros_like(p) for p in model.parameters()]
-    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
-     
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
@@ -151,8 +148,6 @@ def main_resnet101(args):
     model = models.__dict__["resnet101"]()
     model.to(assigned_device)
 
-    memories = [torch.zeros_like(p) for p in model.parameters()]
-    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
      
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
@@ -193,6 +188,27 @@ def main_resnet101(args):
             print ("Done res 101")
             break
             # sys.exit(0)
+
+def powersgd_resnet50(args, psgd_rank):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet101"]()
+    model.to(assigned_device)
+
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    reducer = _get_compression_param("PowerSGD", assigned_device, psgd_rank)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
 
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
