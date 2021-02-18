@@ -238,7 +238,7 @@ def powersgd_resnet50(args, psgd_rank):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
+            file_name = "resnet50_powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
                                                                    global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -294,7 +294,7 @@ def powersgd_resnet101(args, psgd_rank):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
+            file_name = "resnet101_powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
                                                                    global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
