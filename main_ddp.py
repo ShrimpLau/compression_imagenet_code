@@ -211,7 +211,7 @@ def powersgd_resnet50(args, psgd_rank):
     target = torch.randint(0,900, [args.batch_size])
 
     for batch_idx in range(100):
-        data, target = data.to(args.device), target.to(args.device)
+        data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
         torch.cuda.synchronize()
@@ -265,7 +265,7 @@ def powersgd_resnet101(args, psgd_rank):
     target = torch.randint(0,900, [args.batch_size])
 
     for batch_idx in range(100):
-        data, target = data.to(args.device), target.to(args.device)
+        data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
         torch.cuda.synchronize()
