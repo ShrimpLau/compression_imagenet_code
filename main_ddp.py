@@ -39,7 +39,7 @@ def parse_args(parser):
     # parser.add_argument("--arch", default="resnet50", type=str,
                         # help="network type")
     # parser.add_argument("--master-ip", type=str, help="Ip address of master")
-    parser.add_argument("--local-rank", type=int, help="Rank of the experiment")
+    parser.add_argument("--local_rank", type=int, help="Rank of the experiment")
     parser.add_argument("--batch-size", type=int, help="Batch size to use")
     parser.add_argument("--dataset-location", type=str, help="Data path")
     parser.add_argument("--loader-threads", type=int, default=2, help="Loader threads")
