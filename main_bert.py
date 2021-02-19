@@ -757,6 +757,7 @@ def main_bert(args):
             file_uploader.push_file(file_name, 
                                     "{}/{}".format(args.s3_prefix, file_name))
             print ("Done bert")
+            break
 
 
 def powersgd_bert(args, psgd_rank):
@@ -848,5 +849,7 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    # main_bert(args)
+    main_bert(args)
     powersgd_bert(args, 4)
+    powersgd_bert(args, 8)
+    powersgd_bert(args, 16)
