@@ -834,6 +834,7 @@ def powersgd_bert(args, psgd_rank):
             file_uploader.push_file(file_name, 
                                     "{}/{}".format(args.s3_prefix, file_name))
             print ("Done bert")
+            break
 
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
