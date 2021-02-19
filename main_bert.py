@@ -699,10 +699,10 @@ def main_bert(args):
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
 
-    data_dir = "/home/ubuntu/bertFreeze/data/Sogou_data"
-    bert_config_file = "/home/ubuntu/bertFreeze/data/chinese_L-12_H-768_A-12/bert_config.json"
+    data_dir = "/home/ubuntu/bert_data/Sogou_data"
+    bert_config_file = "/home/ubuntu/bert_data/data/chinese_L-12_H-768_A-12/bert_config.json"
     task_name = "sogou"
-    vocab_file = "/home/ubuntu/bertFreeze/data/chinese_L-12_H-768_A-12/vocab.txt"
+    vocab_file = "/home/ubuntu/bert_data/data/chinese_L-12_H-768_A-12/vocab.txt"
     do_lower_case = True
     max_seq_length = args.max_seq_length
     train_batch_size = args.batch_size
