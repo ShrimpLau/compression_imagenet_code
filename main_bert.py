@@ -717,6 +717,18 @@ def main_bert(args):
                                           len(label_list)).to(assigned_device)
     train_features = convert_examples_to_features(train_examples, label_list,
                                                   max_seq_length, tokenizer)
+
+
+    all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+    all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+    all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+
+
+    state = [parameter for parameter in model.parameters()] 
+
+    train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
     train_dataloader = DataLoader(train_data, train_batch_size)
     model = torch.nn.parallel.DistributedDataParallel(model, bucket_cap_mb=45,
                                                       device_ids=[args.local_rank],
