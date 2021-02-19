@@ -748,7 +748,7 @@ def main_bert(args):
 
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
-    log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
+    log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(9)
     # timing_logging = os.path.basename(args.log_file).split(".")[0]+"_time_logged_{}.json".format(args.device)
     logging.basicConfig(filename=log_file_name)
     logger = logging.getLogger()
