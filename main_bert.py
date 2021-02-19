@@ -812,7 +812,7 @@ def powersgd_bert(args, psgd_rank):
         torch.cuda.synchronize()
         start_time.record()
         loss.backward()
-        grad_list = [parameter.grad for parameter in self.model.parameters()]
+        grad_list = [parameter.grad for parameter in model.parameters()]
 
         for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
             send_bfr.data[:] = grad + memory
