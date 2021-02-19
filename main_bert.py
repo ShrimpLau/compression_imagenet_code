@@ -737,7 +737,7 @@ def main_bert(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
     for idx, data in enumerate(train_dataloader):
-        batch = tuple(t.to(assigned_device) for t in batch)
+        batch = tuple(t.to(assigned_device) for t in data)
         input_ids, input_mask, segment_ids, label_ids = batch
         (loss, _) = model(input_ids, segment_ids, input_mask, label_ids)
         torch.cuda.synchronize()
