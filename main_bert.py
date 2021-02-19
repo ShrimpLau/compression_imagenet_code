@@ -747,7 +747,7 @@ def main_bert(args):
         torch.cuda.synchronize()
         time_list.append(start_time.elapsed_time(stop_time))
         if idx == 30:
-            file_uploader = s3_utils.uploadFile("large-scale_compression")
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
