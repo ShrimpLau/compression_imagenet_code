@@ -718,7 +718,7 @@ def main_bert(args):
     train_features = convert_examples_to_features(train_examples, label_list,
                                                   max_seq_length, tokenizer)
     train_dataloader = DataLoader(train_data, train_batch_size)
-    model = torch.nn.parallel.DistributedDataParallel(model,
+    model = torch.nn.parallel.DistributedDataParallel(model, bucket_cap_mb=45,
                                                       device_ids=[args.local_rank],
                                                       output_device=args.local_rank)
     start_time = torch.cuda.Event(enable_timing=True)
