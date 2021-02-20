@@ -697,7 +697,7 @@ def _get_compression_param(reducer_name, device, reducer_param):
 def main_bert(args):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
-    global_rank = args.node_rank * 4 + args.local_rank
+    global_rank = args.node_rank * 8 + args.local_rank
 
     data_dir = "/home/ubuntu/bert_data/Sogou_data"
     bert_config_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/bert_config.json"
@@ -763,7 +763,7 @@ def main_bert(args):
 def powersgd_bert(args, psgd_rank):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
-    global_rank = args.node_rank * 4 + args.local_rank
+    global_rank = args.node_rank * 8 + args.local_rank
 
     data_dir = "/home/ubuntu/bert_data/Sogou_data"
     bert_config_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/bert_config.json"
