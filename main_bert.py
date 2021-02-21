@@ -1021,4 +1021,4 @@ if __name__ == "__main__":
     # topk_bert(args, 0.1)
     # topk_bert(args, 0.01)
     signsgd_bert(args)
-    signsgd_bert(args)
+    # signsgd_bert(args)
