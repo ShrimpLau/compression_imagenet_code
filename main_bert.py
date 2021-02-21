@@ -967,7 +967,7 @@ def signsgd_bert(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    reducer = _get_compression_param("SignSGD", assigned_device)
+    reducer = _get_compression_param("SignSGD", assigned_device, None)
 
     memories = [torch.zeros_like(p) for p in model.parameters()]
     send_buffers = [torch.zeros_like(p) for p in model.parameters()]
@@ -1017,8 +1017,8 @@ if __name__ == "__main__":
     # powersgd_bert(args, 4)
     # powersgd_bert(args, 8)
     # powersgd_bert(args, 16)
-    topk_bert(args, 0.2)
-    topk_bert(args, 0.1)
-    topk_bert(args, 0.01)
+    # topk_bert(args, 0.2)
+    # topk_bert(args, 0.1)
+    # topk_bert(args, 0.01)
     signsgd_bert(args)
     signsgd_bert(args)
