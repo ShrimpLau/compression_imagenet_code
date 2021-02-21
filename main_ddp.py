@@ -354,7 +354,7 @@ def signsgd_resnet101(args):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
+        if batch_idx == 10:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
@@ -409,7 +409,7 @@ def signsgd_resnet50(args):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
+        if batch_idx == 10:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
@@ -464,7 +464,7 @@ def topk_resnet50(args, topk_compression):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
+        if batch_idx == 10:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
@@ -519,7 +519,7 @@ def topk_resnet101(args, topk_compression):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
+        if batch_idx == 10:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
