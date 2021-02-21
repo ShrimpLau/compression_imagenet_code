@@ -85,6 +85,16 @@ def _get_compression_param(reducer_name, device, reducer_param):
                                                   n_power_iterations=0,
                                                   reuse_query=True,
                                                   rank = reducer_param)
+    if reducer_name == "SignSGD":
+        reducer = gradient_reducers.SignSGDwithMajorityVoteReducer(random_seed=42,
+                                                 device=device,
+                                                 timer=timer)
+    if reducer_name == "Topk":
+        reducer = gradient_reducers.GlobalTopKReducer(random_seed=42,
+                                                      device=device,
+                                                      timer=timer,
+                                                      compression=reducer_param)
+
     return reducer
 
 
@@ -304,6 +314,225 @@ def powersgd_resnet101(args, psgd_rank):
             print ("Done Resnet 101")
             break
 
+def signsgd_resnet101(args):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet101"]()
+    model.to(assigned_device)
+
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    reducer = _get_compression_param("SignSGD", assigned_device, None)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        grad_list = [p.grad for p in model.parameters()]
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet101_signsgd_out_file_{}.json".format(
+                global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done Resnet 101")
+            break
+
+def signsgd_resnet50(args):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet50"]()
+    model.to(assigned_device)
+
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    reducer = _get_compression_param("SignSGD", assigned_device, None)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        grad_list = [p.grad for p in model.parameters()]
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet50_signsgd_out_file_{}.json".format(
+                                                                   global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done Resnet 101")
+            break
+
+def topk_resnet50(args, topk_compression):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet50"]()
+    model.to(assigned_device)
+
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    reducer = _get_compression_param("Topk", assigned_device, topk_compression)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        grad_list = [p.grad for p in model.parameters()]
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet50_topk_{}_out_file_{}.json".format(
+                topk_compression, global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done Resnet 50")
+            break
+
+def topk_resnet101(args, topk_compression):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet101"]()
+    model.to(assigned_device)
+
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+     
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    reducer = _get_compression_param("Topk", assigned_device, topk_compression)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((args.batch_size, 3, 224, 224))
+    target = torch.randint(0,900, [args.batch_size])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        grad_list = [p.grad for p in model.parameters()]
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet50_topk_{}_out_file_{}.json".format(
+                topk_compression, global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done Resnet 101")
+            break
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
     # log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
@@ -316,13 +545,19 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    main_resnet50(args)
-    main_resnet101(args)
-    powersgd_resnet50(args, 4)
-    powersgd_resnet50(args, 8)
-    powersgd_resnet50(args, 16)
-    powersgd_resnet101(args, 4)
-    powersgd_resnet101(args, 8)
-    powersgd_resnet101(args, 16)
-    
-
+    # main_resnet50(args)
+    # main_resnet101(args)
+    # powersgd_resnet50(args, 4)
+    # powersgd_resnet50(args, 8)
+    # powersgd_resnet50(args, 16)
+    # powersgd_resnet101(args, 4)
+    # powersgd_resnet101(args, 8)
+    # powersgd_resnet101(args, 16)
+    signsgd_resnet50(args)
+    signsgd_resnet101(args)
+    topk_resnet50(args, 0.2)
+    topk_resnet50(args, 0.1)
+    topk_resnet50(args, 0.01)
+    topk_resnet101(args, 0.2)
+    topk_resnet101(args, 0.1)
+    topk_resnet101(args, 0.01)
