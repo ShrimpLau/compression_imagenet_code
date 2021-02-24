@@ -149,7 +149,111 @@ def main_resnet50(args, bsize):
 
             # sys.exit(0)
 
+def main_resnet50_single_machine(args, bsize):
+    #Initialize dataset
+    print("main_resnet50_single_machine") 
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet50"]()
+    model.to(assigned_device)
 
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    # train_loader = _create_data_loader(args)
+    #reducer = _get_compression_param(args)
+
+    # model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      # device_ids=[args.local_rank],
+                                                      # output_device=args.local_rank)
+
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize() #let's sync before starting
+        start_time.record() 
+        loss.backward() #we have the gradients
+        stop_time.record() 
+        torch.cuda.synchronize()
+        time_list.append(start_time.elapsed_time(stop_time))
+        print(time_list)
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet50_out_file_{}_bsize_{}.json".format(
+                global_rank, bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+            print ("Res 50 done")
+            break
+
+def main_resnet101_single(args, bsize):
+    #Initialize dataset
+    
+    print("main_resnet101_single_machine") 
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__["resnet101"]()
+    model.to(assigned_device)
+
+     
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    # train_loader = _create_data_loader(args)
+    # reducer = _get_compression_param(args)
+
+    # model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      # device_ids=[args.local_rank],
+                                                      # output_device=args.local_rank)
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize() #let's sync before starting
+        start_time.record() 
+        loss.backward() #we have the gradients
+        stop_time.record() 
+        torch.cuda.synchronize()
+        time_list.append(start_time.elapsed_time(stop_time))
+        print (time_list)
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "resnet101_out_file_{}_bsize_{}.json".format(
+                global_rank, bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+            print ("Done res 101")
+            break
 def main_resnet101(args, bsize):
     #Initialize dataset
     
@@ -549,27 +653,29 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    main_resnet50(args, 16)
-    main_resnet50(args, 32)
+    main_resnet50_single_machine(args, 64)
+    main_resnet101_single(args, 64)
+    # main_resnet50(args, 16)
+    # main_resnet50(args, 32)
     # main_resnet50(args, 64)
-    main_resnet101(args, 16)
-    main_resnet101(args, 32)
     # main_resnet101(args, 16)
-    powersgd_resnet50(args, 4, 16)
-    powersgd_resnet50(args, 8, 16)
-    powersgd_resnet50(args, 16, 16)
+    # main_resnet101(args, 32)
+    # main_resnet101(args, 16)
+    # powersgd_resnet50(args, 4, 16)
+    # powersgd_resnet50(args, 8, 16)
+    # powersgd_resnet50(args, 16, 16)
 
-    powersgd_resnet50(args, 4, 32)
-    powersgd_resnet50(args, 8, 32)
-    powersgd_resnet50(args, 16, 32)
+    # powersgd_resnet50(args, 4, 32)
+    # powersgd_resnet50(args, 8, 32)
+    # powersgd_resnet50(args, 16, 32)
 
-    powersgd_resnet101(args, 4, 16)
-    powersgd_resnet101(args, 8, 16)
-    powersgd_resnet101(args, 16, 16)
+    # powersgd_resnet101(args, 4, 16)
+    # powersgd_resnet101(args, 8, 16)
+    # powersgd_resnet101(args, 16, 16)
 
-    powersgd_resnet101(args, 4, 32)
-    powersgd_resnet101(args, 8, 32)
-    powersgd_resnet101(args, 16, 32)
+    # powersgd_resnet101(args, 4, 32)
+    # powersgd_resnet101(args, 8, 32)
+    # powersgd_resnet101(args, 16, 32)
     # signsgd_resnet50(args)
     # signsgd_resnet101(args)
     # topk_resnet50(args, 0.2)
