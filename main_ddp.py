@@ -310,7 +310,6 @@ def powersgd_resnet101(args, psgd_rank, bsize):
             file_name = "resnet101_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(psgd_rank,
                                                                                            global_rank,
                                                                                            bsize)
-
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
