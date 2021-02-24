@@ -98,7 +98,7 @@ def _get_compression_param(reducer_name, device, reducer_param):
     return reducer
 
 
-def main_resnet50(args):
+def main_resnet50(args, bsize):
     #Initialize dataset
     
     assigned_device = "cuda:{}".format(args.local_rank)
@@ -121,8 +121,8 @@ def main_resnet50(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
     # for batch_idx, (data, target) in enumerate(train_loader):
-    data = torch.randn((args.batch_size, 3, 224, 224))
-    target = torch.randint(0,900, [args.batch_size])
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
@@ -138,7 +138,8 @@ def main_resnet50(args):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet50_out_file_{}.json".format(global_rank)
+            file_name = "resnet50_out_file_{}_bsize_{}.json".format(
+                global_rank, bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -149,7 +150,7 @@ def main_resnet50(args):
             # sys.exit(0)
 
 
-def main_resnet101(args):
+def main_resnet101(args, bsize):
     #Initialize dataset
     
     assigned_device = "cuda:{}".format(args.local_rank)
@@ -176,8 +177,8 @@ def main_resnet101(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
     # for batch_idx, (data, target) in enumerate(train_loader):
-    data = torch.randn((args.batch_size, 3, 224, 224))
-    target = torch.randint(0,900, [args.batch_size])
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
@@ -193,7 +194,8 @@ def main_resnet101(args):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet101_out_file_{}.json".format(global_rank)
+            file_name = "resnet101_out_file_{}_bsize_{}.json".format(
+                global_rank, bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -202,7 +204,7 @@ def main_resnet101(args):
             break
             # sys.exit(0)
 
-def powersgd_resnet50(args, psgd_rank):
+def powersgd_resnet50(args, psgd_rank, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
@@ -223,8 +225,8 @@ def powersgd_resnet50(args, psgd_rank):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    data = torch.randn((args.batch_size, 3, 224, 224))
-    target = torch.randint(0,900, [args.batch_size])
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
 
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
@@ -248,8 +250,9 @@ def powersgd_resnet50(args, psgd_rank):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet50_powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
-                                                                   global_rank)
+            file_name = "resnet50_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(psgd_rank,
+                                                                                          global_rank,
+                                                                                          bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -259,7 +262,7 @@ def powersgd_resnet50(args, psgd_rank):
             break
             
 
-def powersgd_resnet101(args, psgd_rank):
+def powersgd_resnet101(args, psgd_rank, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
@@ -279,8 +282,8 @@ def powersgd_resnet101(args, psgd_rank):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    data = torch.randn((args.batch_size, 3, 224, 224))
-    target = torch.randint(0,900, [args.batch_size])
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
 
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
@@ -304,8 +307,10 @@ def powersgd_resnet101(args, psgd_rank):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet101_powersgd_rank_{}_out_file_{}.json".format(psgd_rank,
-                                                                   global_rank)
+            file_name = "resnet101_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(psgd_rank,
+                                                                                           global_rank,
+                                                                                           bsize)
+
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -545,19 +550,32 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    # main_resnet50(args)
-    # main_resnet101(args)
-    # powersgd_resnet50(args, 4)
-    # powersgd_resnet50(args, 8)
-    # powersgd_resnet50(args, 16)
-    # powersgd_resnet101(args, 4)
-    # powersgd_resnet101(args, 8)
-    # powersgd_resnet101(args, 16)
-    signsgd_resnet50(args)
-    signsgd_resnet101(args)
-    topk_resnet50(args, 0.2)
-    topk_resnet50(args, 0.1)
-    topk_resnet50(args, 0.01)
-    topk_resnet101(args, 0.2)
-    topk_resnet101(args, 0.1)
-    topk_resnet101(args, 0.01)
+    main_resnet50(args, 16)
+    main_resnet50(args, 32)
+    # main_resnet50(args, 64)
+    main_resnet101(args, 16)
+    main_resnet101(args, 32)
+    # main_resnet101(args, 16)
+    powersgd_resnet50(args, 4, 16)
+    powersgd_resnet50(args, 8, 16)
+    powersgd_resnet50(args, 16, 16)
+
+    powersgd_resnet50(args, 4, 32)
+    powersgd_resnet50(args, 8, 32)
+    powersgd_resnet50(args, 16, 32)
+
+    powersgd_resnet101(args, 4, 16)
+    powersgd_resnet101(args, 8, 16)
+    powersgd_resnet101(args, 16, 16)
+
+    powersgd_resnet101(args, 4, 32)
+    powersgd_resnet101(args, 8, 32)
+    powersgd_resnet101(args, 16, 32)
+    # signsgd_resnet50(args)
+    # signsgd_resnet101(args)
+    # topk_resnet50(args, 0.2)
+    # topk_resnet50(args, 0.1)
+    # topk_resnet50(args, 0.01)
+    # topk_resnet101(args, 0.2)
+    # topk_resnet101(args, 0.1)
+    # topk_resnet101(args, 0.01)
