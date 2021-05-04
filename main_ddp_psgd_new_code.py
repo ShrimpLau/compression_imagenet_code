@@ -327,7 +327,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
     model = torch.nn.parallel.DistributedDataParallel(model,
                                                       device_ids=[args.local_rank],
                                                       output_device=args.local_rank)
-    state = PowerSGD.PowerSGD_state(process_group=None,
+    state = PowerSGD.PowerSGDState(process_group=None,
                                     matrix_approximation_rank=psgd_rank,
                                     start_powerSGD_iter=1)
     
