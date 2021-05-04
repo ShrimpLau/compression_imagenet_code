@@ -371,7 +371,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done Resnet 50")
+            print ("Done {}".format(network_name))
             break
             
 
