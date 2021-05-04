@@ -331,7 +331,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
                                     matrix_approximation_rank=psgd_rank,
                                     start_powerSGD_iter=3)
     
-    model.register_comm_hook(state, PowerSGD) 
+    model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
     
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
