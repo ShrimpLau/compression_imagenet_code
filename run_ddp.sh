@@ -15,7 +15,7 @@ echo "$log_file";
 echo "$num_workers";
 echo $s3_prefix;
 #./run.sh -arch resnet18 -master-ip tcp://127.0.0.1:2345 -rank 0 -reducer powersgd -bsize 28 -dataset-location /home/ubunut -device cuda:0 -log-file temp -reducer powersgd -reducer-param 2
-source activate pytorch_p36
+source activate pytorch_latest_p37
 OMP_NUM_THREADS=8 python -m torch.distributed.launch --nproc_per_node=4 --nnodes=$num_workers --node_rank=$rank --master_addr=$master_ip --master_port=2345 main_ddp_psgd_new_code.py --batch-size $bsize --dataset-location $dataset_location --log-file $log_file --s3-prefix $s3_prefix --node_rank $rank
 
 
