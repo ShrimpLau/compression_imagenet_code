@@ -329,7 +329,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
                                                       output_device=args.local_rank)
     state = PowerSGD.PowerSGDState(process_group=None,
                                     matrix_approximation_rank=psgd_rank,
-                                    start_powerSGD_iter=1)
+                                    start_powerSGD_iter=3)
     
     model.register_comm_hook(state, PowerSGD) 
     
