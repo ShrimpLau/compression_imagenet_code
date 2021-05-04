@@ -17,7 +17,7 @@ from collections import defaultdict
 import torchvision.models as models
 from torch.autograd import Variable
 
-import torch.distributed.algorithms.ddp_comm_hooks.powerSGD_hook
+import torch.distributed.algorithms.ddp_comm_hooks.powerSGD_hook as PowerSGD
 import gradient_reducers
 import s3_utils
 from timer import Timer
@@ -309,11 +309,11 @@ def main_resnet101(args, bsize):
             break
             # sys.exit(0)
 
-def powersgd_resnet50(args, psgd_rank, bsize):
+def powersgd_single_call(args, psgd_rank, bsize, network_name):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
-    model = models.__dict__["resnet50"]()
+    model = models.__dict__[network_name]()
     model.to(assigned_device)
 
      
@@ -323,7 +323,15 @@ def powersgd_resnet50(args, psgd_rank, bsize):
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
-    reducer = _get_compression_param("PowerSGD", assigned_device, psgd_rank)
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
+    state = PowerSGD.PowerSGD_state(process_group=None,
+                                    matrix_approximation_rank=psgd_rank,
+                                    start_powerSGD_iter=1)
+    
+    model.register_comm_hook(state, PowerSGD) 
     
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
@@ -340,10 +348,10 @@ def powersgd_resnet50(args, psgd_rank, bsize):
         torch.cuda.synchronize()
         start_time.record() 
         loss.backward() #we have the gradients
-        grad_list = [p.grad for p in model.parameters()]
-        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
-            send_bfr.data[:] = grad + memory
-        reducer.reduce(send_buffers, grad_list, memories)
+        # grad_list = [p.grad for p in model.parameters()]
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        # reducer.reduce(send_buffers, grad_list, memories)
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
@@ -355,7 +363,7 @@ def powersgd_resnet50(args, psgd_rank, bsize):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet50_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(psgd_rank,
+            file_name = "{}_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
                                                                                           global_rank,
                                                                                           bsize)
             with open(file_name, "w") as fout:
@@ -653,10 +661,10 @@ if __name__ == "__main__":
     print ("In If")
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     print ("Dist connected")
-    main_resnet50_single_machine(args, 64)
-    main_resnet101_single(args, 64)
+    # main_resnet50_single_machine(args, 64)
+    # main_resnet101_single(args, 64)
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
     # main_resnet50(args, 64)
@@ -670,7 +678,13 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 4, 32)
     # powersgd_resnet50(args, 8, 32)
     # powersgd_resnet50(args, 16, 32)
-
+    powersgd_single_call(args, 4, 16, "resnet50")
+    powersgd_single_call(args, 8, 16, "resnet50")
+    powersgd_single_call(args, 16, 16, "resnet50")
+    
+    # powersgd_single_call(args, 4, 16, "resnet101")
+    # powersgd_single_call(args, 8, 16, "resnet101")
+    # powersgd_single_call(args, 16, 16, "resnet101")
     # powersgd_resnet101(args, 4, 16)
     # powersgd_resnet101(args, 8, 16)
     # powersgd_resnet101(args, 16, 16)
