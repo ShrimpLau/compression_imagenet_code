@@ -1323,9 +1323,9 @@ if __name__ == "__main__":
     # powersgd_bert(args, 8)
     # powersgd_bert(args, 16)
 
-    powersgd_bert_integrated(args, 4)
-    powersgd_bert_integrated(args, 8)
-    powersgd_bert_integrated(args, 16)
+    # powersgd_bert_integrated(args, 4)
+    # powersgd_bert_integrated(args, 8)
+    # powersgd_bert_integrated(args, 16)
     
     topk_bert_single_call(args, 0.001)
     topk_bert_single_call(args, 0.01)
