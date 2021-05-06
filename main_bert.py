@@ -1317,7 +1317,7 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    # main_bert(args)
+    main_bert(args)
     # main_bert_single(args)
     # powersgd_bert(args, 4)
     # powersgd_bert(args, 8)
