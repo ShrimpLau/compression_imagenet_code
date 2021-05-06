@@ -378,7 +378,7 @@ def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
     tensor = bucket.get_tensors()[0]
     encoded_tensor = torch.ones_like(tensor) 
-    fut = dist.all_reduce(encoded_tensor).get_future()
+    fut = dist.all_reduce(encoded_tensor, group=dist.group.WORLD, async_op=True).get_future()
     def decode(fut):
         decoded_tensor = fut.value()
         return decoded_tensor
