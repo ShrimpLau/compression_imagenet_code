@@ -746,8 +746,8 @@ if __name__ == "__main__":
     # main_resnet101_single(args, 64)
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
-    main_resnet50(args, 64)
-    main_resnet101(args, 64)
+    # main_resnet50(args, 64)
+    # main_resnet101(args, 64)
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
     # main_resnet101(args, 16)
@@ -758,13 +758,17 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 4, 32)
     # powersgd_resnet50(args, 8, 32)
     # powersgd_resnet50(args, 16, 32)
-    powersgd_single_call(args, 4, 64, "resnet50")
-    powersgd_single_call(args, 8, 64, "resnet50")
-    powersgd_single_call(args, 16, 64, "resnet50")
+    # powersgd_single_call(args, 4, 64, "resnet50")
+    # powersgd_single_call(args, 8, 64, "resnet50")
+    # powersgd_single_call(args, 16, 64, "resnet50")
     
-    powersgd_single_call(args, 4, 64, "resnet101")
-    powersgd_single_call(args, 8, 64, "resnet101")
-    powersgd_single_call(args, 16, 64, "resnet101")
+    # powersgd_single_call(args, 4, 64, "resnet101")
+    # powersgd_single_call(args, 8, 64, "resnet101")
+    # powersgd_single_call(args, 16, 64, "resnet101")
+    
+    ddp_test_hook(args, 16, 64, "resnet50")
+
+
 
     # powersgd_resnet101(args, 4, 16)
     # powersgd_resnet101(args, 8, 16)
