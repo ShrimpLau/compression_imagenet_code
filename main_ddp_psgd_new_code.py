@@ -465,7 +465,7 @@ def ddp_test_hook(args, psgd_rank, bsize, network_name):
                                     # start_powerSGD_iter=3)
     
     # model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
-    model.register_comm_hook(state={'a':1}, hook=encode_decode)
+    model.register_comm_hook(state={'N':10, 'k':0.1}, hook=encode_decode)
     
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
