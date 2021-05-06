@@ -408,8 +408,11 @@ def encode_decode(state, bucket):
                 thres2 = thres
     l1 = torch.nonzero(a>= thres1, as_tuple=True)[0] #since 1d no problem
     l2 = torch.nonzero((a<thres1) & (a >= thres2), as_tuple=True)[0]
-    rand = random.randint(0, len(l2)-(k-k1)+1)
-    l = torch.cat((l1, l2[rand:rand+k-k1]))
+    if len(l2)-(k-k1)+1 < 0:
+        l = torch.cat((l1, l2[0:k-len(l1)]))
+    else:
+        rand = random.randint(0, len(l2)-(k-k1)+1)
+        l = torch.cat((l1, l2[rand:rand+k-k1]))
     kai = tensor[l]
 
 
