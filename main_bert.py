@@ -1206,11 +1206,11 @@ def topk_bert_single_call(args, topk_k):
         torch.cuda.synchronize()
         start_time.record()
         loss.backward()
-        grad_list = [parameter.grad for parameter in model.parameters()]
+        # grad_list = [parameter.grad for parameter in model.parameters()]
 
-        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
-            send_bfr.data[:] = grad + memory
-        reducer.reduce(send_buffers, grad_list, memories)
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        # reducer.reduce(send_buffers, grad_list, memories)
 
         stop_time.record()
         torch.cuda.synchronize()
