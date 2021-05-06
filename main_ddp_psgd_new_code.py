@@ -425,10 +425,10 @@ def encode_decode(state, bucket):
     out_list = [torch.zeros_like(kai, device=kai.device,
                 dtype=kai.dtype) for _ in range(world_size)]
 
-    idx_list = [torch.zeros_like(l, device=l.device,
-                dtype=l.dtype) for _ in range(world_size)]
+    # idx_list = [torch.zeros_like(l, device=l.device,
+                # dtype=l.dtype) for _ in range(world_size)]
 
-    dist.all_gather(idx_list, l, group=group_to_use,
+    dist.all_gather(out_list, kai, group=group_to_use,
                     async_op=True)
 
     fut = dist.all_gather(
@@ -806,8 +806,10 @@ if __name__ == "__main__":
     # main_resnet101_single(args, 64)
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
-    main_resnet50(args, 64)
-    main_resnet101(args, 64)
+
+    # main_resnet50(args, 64)
+    # main_resnet101(args, 64)
+
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
     # main_resnet101(args, 16)
@@ -818,17 +820,19 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 4, 32)
     # powersgd_resnet50(args, 8, 32)
     # powersgd_resnet50(args, 16, 32)
-    powersgd_single_call(args, 4, 64, "resnet50")
-    powersgd_single_call(args, 8, 64, "resnet50")
-    powersgd_single_call(args, 16, 64, "resnet50")
+
+
+    # powersgd_single_call(args, 4, 64, "resnet50")
+    # powersgd_single_call(args, 8, 64, "resnet50")
+    # powersgd_single_call(args, 16, 64, "resnet50")
     
-    powersgd_single_call(args, 4, 64, "resnet101")
-    powersgd_single_call(args, 8, 64, "resnet101")
-    powersgd_single_call(args, 16, 64, "resnet101")
+    # powersgd_single_call(args, 4, 64, "resnet101")
+    # powersgd_single_call(args, 8, 64, "resnet101")
+    # powersgd_single_call(args, 16, 64, "resnet101")
     
-    topk_single_call_reducer(args, 0.1, 64, "resnet50")
-    topk_single_call_reducer(args, 0.01, 64, "resnet50")
-    topk_single_call_reducer(args, 0.001, 64, "resnet50")
+    # topk_single_call_reducer(args, 0.1, 64, "resnet50")
+    # topk_single_call_reducer(args, 0.01, 64, "resnet50")
+    # topk_single_call_reducer(args, 0.001, 64, "resnet50")
 
     # topk_single_call_reducer(args, 0.1, 64, "resnet101")
     topk_single_call_reducer(args, 0.01, 64, "resnet101")
