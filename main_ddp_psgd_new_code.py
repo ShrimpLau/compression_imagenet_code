@@ -375,9 +375,10 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
             break
 
 def encode_decode(state, bucket):
-    tensors = [ t/process_group.world_size for t in bucket.get_tensors()]
-    encoded_tensor = [torch.ones_like(t) for t in tensors]
-    fut = process_group.all_reduce(encoded_tensor).get_future()
+    # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
+    tensor = bucket.get_tensors()[0]
+    encoded_tensor = torch.ones_like(tensor) 
+    fut = dist.all_reduce(encoded_tensor).get_future()
     def decode(fut):
         decoded_tensor = fut.value()
         return decoded_tensor
