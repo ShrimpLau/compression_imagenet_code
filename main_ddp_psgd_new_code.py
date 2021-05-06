@@ -377,7 +377,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
 def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
             
-    print (state)
+    # print (state)
     tensor = bucket.get_tensors()[0]
     k = int(state['k']*len(tensor))
     N = state['N']
@@ -438,7 +438,7 @@ def encode_decode(state, bucket):
                                       dtype=tensor.dtype)
         for gt in agg_tensor:
             out_tensor[:len(gt)] += gt
-        print (out_tensor) 
+        # print (out_tensor) 
         return [out_tensor]
     return fut.then(decode)
             
