@@ -442,7 +442,7 @@ def encode_decode(state, bucket):
         return [out_tensor]
     return fut.then(decode)
             
-def ddp_test_hook(args, psgd_rank, bsize, network_name):
+def topk_single_call_reducer(args, topk_k, bsize, network_name):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
@@ -465,7 +465,7 @@ def ddp_test_hook(args, psgd_rank, bsize, network_name):
                                     # start_powerSGD_iter=3)
     
     # model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
-    model.register_comm_hook(state={'N':10, 'k':0.1}, hook=encode_decode)
+    model.register_comm_hook(state={'N':100, 'k':topk_k}, hook=encode_decode)
     
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
@@ -489,8 +489,8 @@ def ddp_test_hook(args, psgd_rank, bsize, network_name):
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
-        for param in model.parameters():
-            import ipdb; ipdb.set_trace()
+        # for param in model.parameters():
+            # import ipdb; ipdb.set_trace()
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
@@ -499,9 +499,9 @@ def ddp_test_hook(args, psgd_rank, bsize, network_name):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "{}_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
-                                                                                          global_rank,
-                                                                                          bsize)
+            file_name =
+            "{}_topk_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
+                                                                 topk_k,global_rank,bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
@@ -804,8 +804,8 @@ if __name__ == "__main__":
     # main_resnet101_single(args, 64)
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
-    # main_resnet50(args, 64)
-    # main_resnet101(args, 64)
+    main_resnet50(args, 64)
+    main_resnet101(args, 64)
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
     # main_resnet101(args, 16)
@@ -816,16 +816,21 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 4, 32)
     # powersgd_resnet50(args, 8, 32)
     # powersgd_resnet50(args, 16, 32)
-    # powersgd_single_call(args, 4, 64, "resnet50")
-    # powersgd_single_call(args, 8, 64, "resnet50")
-    # powersgd_single_call(args, 16, 64, "resnet50")
+    powersgd_single_call(args, 4, 64, "resnet50")
+    powersgd_single_call(args, 8, 64, "resnet50")
+    powersgd_single_call(args, 16, 64, "resnet50")
     
-    # powersgd_single_call(args, 4, 64, "resnet101")
-    # powersgd_single_call(args, 8, 64, "resnet101")
-    # powersgd_single_call(args, 16, 64, "resnet101")
+    powersgd_single_call(args, 4, 64, "resnet101")
+    powersgd_single_call(args, 8, 64, "resnet101")
+    powersgd_single_call(args, 16, 64, "resnet101")
     
-    ddp_test_hook(args, 16, 64, "resnet50")
+    topk_single_call_reducer(args, 0.1, 64, "resnet50")
+    topk_single_call_reducer(args, 0.01, 64, "resnet50")
+    topk_single_call_reducer(args, 0.001, 64, "resnet50")
 
+    topk_single_call_reducer(args, 0.1, 64, "resnet101")
+    topk_single_call_reducer(args, 0.01, 64, "resnet101")
+    topk_single_call_reducer(args, 0.001, 64, "resnet101")
 
 
     # powersgd_resnet101(args, 4, 16)
