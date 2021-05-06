@@ -436,7 +436,7 @@ def encode_decode(state, bucket):
 
     def decode(fut):
         agg_tensor = fut.value()[0]
-        fut_tensor = bucket.get_tensors()[0]
+        fut_tensor = grad_1d
         out_tensor = torch.zeros_like(fut_tensor, device=tensor.device,
                                       dtype=tensor.dtype)
         for gt in agg_tensor:
@@ -509,7 +509,7 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done {}".format(network_name))
+            print ("Done {} TopK".format(network_name))
             break
             
 
@@ -830,7 +830,7 @@ if __name__ == "__main__":
     topk_single_call_reducer(args, 0.01, 64, "resnet50")
     topk_single_call_reducer(args, 0.001, 64, "resnet50")
 
-    topk_single_call_reducer(args, 0.1, 64, "resnet101")
+    # topk_single_call_reducer(args, 0.1, 64, "resnet101")
     topk_single_call_reducer(args, 0.01, 64, "resnet101")
     topk_single_call_reducer(args, 0.001, 64, "resnet101")
 
