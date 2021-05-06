@@ -376,16 +376,60 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
 
 def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
+            
     print (state)
     tensor = bucket.get_tensors()[0]
-    tensor = torch.ones_like(tensor, device=tensor.device, dtype=tensor.dtype)
+    k = int(state['k']*len(tensor))
+    N = state['N']
+    grad_1d = tensor 
+    # grad_1d = grad_in.reshape(-1) #reshaping to 1d
+    a = torch.abs(grad_1d)
+    a_hat = torch.mean(a)
+    u = torch.max(a)
+    l = 0
+    r = 1
+    k1 = 0
+    k2 = len(grad_1d)
+    thres1 = 0
+    thres2 = 0
+    for i in range(N):
+        ratio = l + (r-l)/2
+        thres = a_hat + ratio*(u-a_hat)
+        nnz = torch.count_nonzero(a >= thres)
+        if nnz <= k:
+            r = ratio
+            if nnz > k1:
+                k1 = nnz
+                thres1 = thres
+        elif nnz > k:
+            l= ratio
+            if nnz < k2:
+                k2 = nnz
+                thres2 = thres
+    l1 = torch.nonzero(a>= thres1, as_tuple=True)[0] #since 1d no problem
+    l2 = torch.nonzero((a<thres1) & (a >= thres2), as_tuple=True)[0]
+    rand = random.randint(0, len(l2)-(k-k1)+1)
+    l = torch.concat(l1, l2[rand:rand+k-k1])
+    kai = grad_in[l]
+
+
+
+
+    # tensor = torch.ones_like(tensor, device=tensor.device, dtype=tensor.dtype)
     group_to_use = dist.group.WORLD
     world_size = group_to_use.size()
     
-    out_list = [torch.zeros_like(tensor, device=tensor.device,
-                dtype=tensor.dtype) for _ in range(world_size)]
+    out_list = [torch.zeros_like(kai, device=kai.device,
+                dtype=kai.dtype) for _ in range(world_size)]
+
+    idx_list = [torch.zeros_like(l, device=l.device,
+                dtype=l.dtype) for _ in range(world_size)]
+
+    dist.all_gather(idx_list, l, group=group_to_use,
+                    async_op=True)
+
     fut = dist.all_gather(
-        out_list, tensor, group=group_to_use, async_op=True).get_future()
+        out_list, kai, group=group_to_use, async_op=True).get_future()
 
     def decode(fut):
         agg_tensor = fut.value()[0]
@@ -393,11 +437,10 @@ def encode_decode(state, bucket):
         out_tensor = torch.zeros_like(fut_tensor, device=tensor.device,
                                       dtype=tensor.dtype)
         for gt in agg_tensor:
-            out_tensor += gt
-        
-        return out_tensor
+            out_tensor[:len(gt)] += gt
+        print (out_tensor) 
+        return [out_tensor]
     return fut.then(decode)
-
             
 def ddp_test_hook(args, psgd_rank, bsize, network_name):
     assigned_device = "cuda:{}".format(args.local_rank)
