@@ -499,8 +499,7 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name =
-            "{}_topk_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
+            file_name = "{}_topk_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
                                                                  topk_k,global_rank,bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
