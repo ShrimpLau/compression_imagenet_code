@@ -373,7 +373,86 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
 
             print ("Done {}".format(network_name))
             break
+
+def encode_decode(state, bucket):
+    tensors = [ t/process_group.world_size for t in bucket.get_tensors()]
+    encoded_tensor = [torch.ones_like(t) for t in tensors]
+    fut = process_group.all_reduce(encoded_tensor).get_future()
+    def decode(fut):
+        decoded_tensor = fut.value()
+        return decoded_tensor
+    return fut.then(decode)
+
             
+def ddp_test_hook(args, psgd_rank, bsize, network_name):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__[network_name]()
+    model.to(assigned_device)
+
+     
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
+    # state = PowerSGD.PowerSGDState(process_group=None,
+                                    # matrix_approximation_rank=psgd_rank,
+                                    # start_powerSGD_iter=3)
+    
+    # model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
+    model.register_comm_hook(state=None, hook=encode_decode)
+    
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        # grad_list = [p.grad for p in model.parameters()]
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        # reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        for param in model.parameters():
+            import ipdb; ipdb.set_trace()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "{}_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
+                                                                                          global_rank,
+                                                                                          bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done {}".format(network_name))
+            break
+            
+
 
 def powersgd_resnet101(args, psgd_rank, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
