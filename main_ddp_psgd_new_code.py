@@ -376,7 +376,9 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
 
 def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
+    print (state)
     tensor = bucket.get_tensors()[0]
+    tensor = torch.ones_like(tensor)
     group_to_use = dist.group.WORLD
     world_size = group_to_use.size()
     
@@ -420,7 +422,7 @@ def ddp_test_hook(args, psgd_rank, bsize, network_name):
                                     # start_powerSGD_iter=3)
     
     # model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
-    model.register_comm_hook(state=None, hook=encode_decode)
+    model.register_comm_hook(state={'a':1}, hook=encode_decode)
     
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
