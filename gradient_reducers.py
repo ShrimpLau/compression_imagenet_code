@@ -871,7 +871,7 @@ class MsTopKReducer(Reducer):
     def reduce(self, grad_in, grad_out):
         grad_in = list_to_tensor(grad_in)
         grad_1d = grad_in.reshape(-1) #reshaping to 1d
-        k = int(self.k*len(grad_1d) #change percent to actual number
+        k = int(self.k*len(grad_1d)) #change percent to actual number
         a = torch.abs(grad_1d)
         a_hat = torch.mean(a)
         u = torch.max(a)
