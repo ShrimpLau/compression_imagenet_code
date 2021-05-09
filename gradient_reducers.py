@@ -921,7 +921,7 @@ class MsTopKReducer(Reducer):
         start_index = 0
         for idx, ts in enumerate(grad_out):
             num_element_ts = grad_out[idx].numel()
-            ts = start_idx[start_index:start_index+num_element_ts]
+            ts = grad_accum[start_index:start_index+num_element_ts]
             grad_out[idx] = ts
             start_index += num_element_ts
         # grad_out = grad_1.reshape(grad_in.shape)
