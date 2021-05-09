@@ -917,14 +917,14 @@ class MsTopKReducer(Reducer):
         for idx, vals in zip(index_list, value_list):
             grad_accum[idx] += vals
         
-        print ("Starting element copy") 
-        start_index = 0
-        for idx, ts in enumerate(grad_out):
-            num_element_ts = grad_out[idx].numel()
-            ts = grad_accum[start_index:start_index+num_element_ts]
-            grad_out[idx] = ts
-            start_index += num_element_ts
-        print ("Done element copy")
+        # print ("Starting element copy") 
+        # start_index = 0
+        # for idx, ts in enumerate(grad_out):
+            # num_element_ts = grad_out[idx].numel()
+            # ts = grad_accum[start_index:start_index+num_element_ts]
+            # grad_out[idx] = ts
+            # start_index += num_element_ts
+        # print ("Done element copy")
         # grad_out = grad_1.reshape(grad_in.shape)
         return grad_out
 
