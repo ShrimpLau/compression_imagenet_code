@@ -881,7 +881,7 @@ class MsTopKReducer(Reducer):
         k2 = len(grad_1d)
         thres1 = 0
         thres2 = 0
-        for i in range(N):
+        for i in range(self.N):
             ratio = l + (r-l)/2
             thres = a_hat + ratio*(u-a_hat)
             nnz = torch.count_nonzero(a >= thres)
