@@ -868,7 +868,7 @@ class MsTopKReducer(Reducer):
     def __init__(self, random_seed, device, timer, k):
         super().__init__(random_seed, device, timer)
         self.k = k
-        self.N = 20
+        self.N = 100
     def reduce(self, grad_in, grad_out):
         grad_in = list_to_tensor(grad_in)
         grad_1d = grad_in.reshape(-1) #reshaping to 1d
@@ -901,9 +901,11 @@ class MsTopKReducer(Reducer):
 
         if len(l2)-(k-k1)+1 < 0:
             l = torch.cat((l1, l2[0:k-len(l1)]))
+            print("Fake if")
         else:
             rand = random.randint(0, len(l2)-(k-k1)+1)
             l = torch.cat((l1, l2[rand:rand+k-k1]))
+            print ("Actual if")
         kai = grad_1d[l]
         
         index_list = [torch.zeros_like(l, device=l.device, dtype=l.dtype) for _ in range(self.n_workers)]
