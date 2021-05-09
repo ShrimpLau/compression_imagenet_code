@@ -1216,12 +1216,12 @@ def topk_bert_single_call(args, topk_k):
         torch.cuda.synchronize()
 
         time_list.append(start_time.elapsed_time(stop_time))
-        if idx == 7:
+        if idx == 30:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "bert_topk_{}_out_file_{}.json".format(
+            file_name = "bert_mstopk_overlap_{}_out_file_{}.json".format(
                 topk_k,global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -1230,6 +1230,88 @@ def topk_bert_single_call(args, topk_k):
             print ("Done bert")
             break
 
+def mstopk_serial(args, topk_k):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 8 + args.local_rank
+
+    data_dir = "/home/ubuntu/bert_data/Sogou_data"
+    bert_config_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/bert_config.json"
+    task_name = "sogou"
+    vocab_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/vocab.txt"
+    do_lower_case = True
+    max_seq_length = args.max_seq_length
+    train_batch_size = args.batch_size
+    learning_rate = 1e-5
+    bert_config = BertConfig.from_json_file(bert_config_file)
+    processor = Sogou_Processor()
+    label_list = processor.get_labels()
+    tokenizer = tokenization.FullTokenizer(vocab_file=vocab_file,
+                                           do_lower_case=do_lower_case)
+    train_examples = processor.get_train_examples(data_dir)
+    model = BertForSequenceClassification(bert_config,
+                                          len(label_list)).to(assigned_device)
+    train_features = convert_examples_to_features(train_examples, label_list,
+                                                  max_seq_length, tokenizer)
+
+
+    all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+    all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+    all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+
+
+    state = [parameter for parameter in model.parameters()] 
+
+    train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
+    train_dataloader = DataLoader(train_data, train_batch_size)
+
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    # model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      # device_ids=[args.local_rank],
+                                                      # output_device=args.local_rank)
+    # model.register_comm_hook(state={'N':100, 'k':topk_k}, hook=encode_decode)
+    # reducer = _get_compression_param("Topk", assigned_device, psgd_rank)
+
+    # memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+    reducer = _get_compression_param("MSTopK", assigned_device, topk_k) 
+    model.train()
+
+    for idx, data in enumerate(train_dataloader):
+        batch = tuple(t.to(assigned_device) for t in data)
+        input_ids, input_mask, segment_ids, label_ids = batch
+        (loss, _) = model(input_ids, segment_ids, input_mask, label_ids)
+        torch.cuda.synchronize()
+        start_time.record()
+        loss.backward()
+        grad_list = [parameter.grad for parameter in model.parameters()]
+
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list)
+
+        stop_time.record()
+        torch.cuda.synchronize()
+
+        time_list.append(start_time.elapsed_time(stop_time))
+        if idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "bert_mstopk_serial_{}_out_file_{}.json".format(
+                topk_k,global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name, 
+                                    "{}/{}".format(args.s3_prefix, file_name))
+            print ("Done bert")
+            break
 def signsgd_bert(args):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
