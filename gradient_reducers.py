@@ -864,7 +864,7 @@ class MsTopKReducer(Reducer):
     """
     This is the statistical topK reducer which performs the approximate topK
     """
-    def __init__(self, random_seem, device, timer, k):
+    def __init__(self, random_seed, device, timer, k):
         super().__init__(random_seed, device, timer)
         self.k = k
         self.N = 20
