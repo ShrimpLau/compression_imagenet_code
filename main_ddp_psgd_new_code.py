@@ -96,6 +96,11 @@ def _get_compression_param(reducer_name, device, reducer_param):
                                                       timer=timer,
                                                       compression=reducer_param)
 
+    if reducer_name = "MSTopK":
+        reducer = gradient_reducers.MsTopKReducer(random_seed=42,
+                                                  device=device, timer=timer,
+                                                  k=reducer_param)
+
     return reducer
 
 
@@ -453,9 +458,6 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
     model = models.__dict__[network_name]()
     model.to(assigned_device)
 
-     
-    memories = [torch.zeros_like(p) for p in model.parameters()]
-    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
 
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
@@ -464,13 +466,10 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
     model = torch.nn.parallel.DistributedDataParallel(model,
                                                       device_ids=[args.local_rank],
                                                       output_device=args.local_rank)
-    # state = PowerSGD.PowerSGDState(process_group=None,
-                                    # matrix_approximation_rank=psgd_rank,
-                                    # start_powerSGD_iter=3)
-    
-    # model.register_comm_hook(state, PowerSGD.powerSGD_hook) 
-    model.register_comm_hook(state={'N':100, 'k':topk_k}, hook=encode_decode)
-    
+   
+
+    model.register_comm_hook(state={'N':20, 'k':topk_k}, hook=encode_decode)
+
     model.train()
     start_time = torch.cuda.Event(enable_timing=True)
     stop_time = torch.cuda.Event(enable_timing=True)
@@ -503,7 +502,7 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "{}_topk_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
+            file_name = "{}_mstopk_overlap_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
                                                                  topk_k,global_rank,bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -514,6 +513,61 @@ def topk_single_call_reducer(args, topk_k, bsize, network_name):
             break
             
 
+def mstopk_serial(args, topk_k, bsize, network_name):
+
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__[network_name]()
+    model.to(assigned_device)
+
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+    reducer = _get_compression_param("MSTopK", assigned_device, topk_k) 
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        grad_list = [p.grad for p in model.parameters()]
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        reducer.reduce(grad_list, send_buffers)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # for param in model.parameters():
+            # import ipdb; ipdb.set_trace()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 30:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "{}_mstopk_serial_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
+                                                                 topk_k,global_rank,bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done {} TopK".format(network_name))
+            break
 
 def powersgd_resnet101(args, psgd_rank, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
@@ -787,7 +841,6 @@ def topk_resnet101(args, topk_compression):
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
-
             print ("Done Resnet 101")
             break
 if __name__ == "__main__":
@@ -837,9 +890,11 @@ if __name__ == "__main__":
 
     # topk_single_call_reducer(args, 0.1, 64, "resnet101")
 
-    topk_single_call_reducer(args, 0.001, 64, "resnet101")
-    topk_single_call_reducer(args, 0.01, 64, "resnet101")
+    # topk_single_call_reducer(args, 0.001, 64, "resnet101")
+    # topk_single_call_reducer(args, 0.01, 64, "resnet101")
 
+    mstopk_serial(args, 0.001, 64, "resnet50")
+    mstopk_serial(args, 0.01, 64, "resnet50")
 
     # powersgd_resnet101(args, 4, 16)
     # powersgd_resnet101(args, 8, 16)

@@ -855,6 +855,76 @@ class RankKReducer(Reducer):
         # print (bits_communicated)
         return bits_communicated
 
+def list_to_tensor(input_list):
+    temp_list = [t.reshape(-1) for t in input_list]
+    return (torch.cat(temp_list))
+
+
+class MsTopKReducer(Reducer):
+    """
+    This is the statistical topK reducer which performs the approximate topK
+    """
+    def __init__(self, random_seem, device, timer, k):
+        super().__init__(random_seed, device, timer)
+        self.k = k
+        self.N = 20
+    def reduce(self, grad_in, grad_out):
+        grad_in = list_to_tensor(grad_in)
+        grad_1d = grad_in.reshape(-1) #reshaping to 1d
+        k = int(self.k*len(grad_1d) #change percent to actual number
+        a = torch.abs(grad_1d)
+        a_hat = torch.mean(a)
+        u = torch.max(a)
+        l = 0
+        r = 1
+        k1 = 0
+        k2 = len(grad_1d)
+        thres1 = 0
+        thres2 = 0
+        for i in range(N):
+            ratio = l + (r-l)/2
+            thres = a_hat + ratio*(u-a_hat)
+            nnz = torch.count_nonzero(a >= thres)
+            if nnz <= k:
+                r = ratio
+                if nnz > k1:
+                    k1 = nnz
+                    thres1 = thres
+            elif nnz > k:
+                l= ratio
+                if nnz < k2:
+                    k2 = nnz
+                    thres2 = thres
+        l1 = torch.nonzero(a>= thres1, as_tuple=True)[0] #since 1d no problem
+        l2 = torch.nonzero((a<thres1) & (a >= thres2), as_tuple=True)[0]
+
+        if len(l2)-(k-k1)+1 < 0:
+            l = torch.cat((l1, l2[0:k-len(l1)]))
+        else:
+            rand = random.randint(0, len(l2)-(k-k1)+1)
+            l = torch.cat((l1, l2[rand:rand+k-k1]))
+        kai = grad_1d[l]
+        
+        index_list = [torch.zeros_like(l) for k in range(self.n_workers)]
+        ind_wait = torch.distributed.all_gather(index_list, l, async_op=True)
+        value_list = [torch.zeros_like(kai) for k in range(self.n_workers)]
+        val_wait = torch.distributed.all_gather(value_list, kai, async_op=True)
+        ind_wait.wait()
+        val_wait.wait()
+
+        grad_accum = torch.zeros_like(grad_1d)
+        for idx, vals in zip(index_list, value_list):
+            grad_accum[idx] += vals
+        
+       
+        start_index = 0
+        for idx, ts in enumerate(grad_out):
+            num_element_ts = grad_out.numel()
+            ts = start_idx[start_index:start_index+num_element_ts]
+            grad_out[idx] = ts
+            start_index += num_element_ts
+        # grad_out = grad_1.reshape(grad_in.shape)
+        return grad_out
 
 
 
