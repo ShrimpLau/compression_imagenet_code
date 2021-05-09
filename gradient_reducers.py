@@ -924,6 +924,7 @@ class MsTopKReducer(Reducer):
             ts = grad_accum[start_index:start_index+num_element_ts]
             grad_out[idx] = ts
             start_index += num_element_ts
+        print ("Done element copy")
         # grad_out = grad_1.reshape(grad_in.shape)
         return grad_out
 
