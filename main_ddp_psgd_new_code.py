@@ -895,7 +895,11 @@ if __name__ == "__main__":
 
     mstopk_serial(args, 0.001, 64, "resnet50")
     mstopk_serial(args, 0.01, 64, "resnet50")
+    mstopk_serial(args, 0.1, 64, "resnet50")
 
+    mstopk_serial(args, 0.001, 64, "resnet101")
+    mstopk_serial(args, 0.01, 64, "resnet101")
+    mstopk_serial(args, 0.1, 64, "resnet101")
     # powersgd_resnet101(args, 4, 16)
     # powersgd_resnet101(args, 8, 16)
     # powersgd_resnet101(args, 16, 16)
