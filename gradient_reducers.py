@@ -906,9 +906,9 @@ class MsTopKReducer(Reducer):
             l = torch.cat((l1, l2[rand:rand+k-k1]))
         kai = grad_1d[l]
         
-        index_list = [torch.zeros_like(l) for k in range(self.n_workers)]
+        index_list = [torch.zeros_like(l, device=l.device, dtype=l.dtype) for _ in range(self.n_workers)]
         ind_wait = torch.distributed.all_gather(index_list, l, async_op=True)
-        value_list = [torch.zeros_like(kai) for k in range(self.n_workers)]
+        value_list = [torch.zeros_like(kai, device=kai.device, dtype=kai.dtype) for _ in range(self.n_workers)]
         val_wait = torch.distributed.all_gather(value_list, kai, async_op=True)
         ind_wait.wait()
         val_wait.wait()
