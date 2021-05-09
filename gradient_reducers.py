@@ -901,11 +901,11 @@ class MsTopKReducer(Reducer):
 
         if len(l2)-(k-k1)+1 < 0:
             l = torch.cat((l1, l2[0:k-len(l1)]))
-            print("Fake if")
+            # print("Fake if")
         else:
             rand = random.randint(0, len(l2)-(k-k1)+1)
             l = torch.cat((l1, l2[rand:rand+k-k1]))
-            print ("Actual if")
+            # print ("Actual if")
         kai = grad_1d[l]
 
         kai = torch.zeros((k), device=kai.device, dtype=kai.dtype)
