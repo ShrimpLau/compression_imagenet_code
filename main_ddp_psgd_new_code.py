@@ -453,6 +453,7 @@ def encode_decode(state, bucket):
             
 def mstopk_single_call_reducer(args, topk_k, bsize, network_name):
     assigned_device = "cuda:{}".format(args.local_rank)
+    print("Assigned Device {}".format(assigned_device))
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
     model = models.__dict__[network_name]()
@@ -892,8 +893,6 @@ if __name__ == "__main__":
 
     # topk_single_call_reducer(args, 0.001, 64, "resnet101")
     # topk_single_call_reducer(args, 0.01, 64, "resnet101")
-
-
 
     mstopk_single_call_reducer(args, 0.001, 64, "resnet50")
     mstopk_serial(args, 0.001, 64, "resnet50")
