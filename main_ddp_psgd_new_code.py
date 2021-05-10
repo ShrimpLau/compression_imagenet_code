@@ -877,13 +877,13 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 16, 32)
 
 
-    # powersgd_single_call(args, 4, 64, "resnet50")
-    # powersgd_single_call(args, 8, 64, "resnet50")
-    # powersgd_single_call(args, 16, 64, "resnet50")
+    powersgd_single_call(args, 4, 64, "resnet50")
+    powersgd_single_call(args, 8, 64, "resnet50")
+    powersgd_single_call(args, 16, 64, "resnet50")
     
-    # powersgd_single_call(args, 4, 64, "resnet101")
-    # powersgd_single_call(args, 8, 64, "resnet101")
-    # powersgd_single_call(args, 16, 64, "resnet101")
+    powersgd_single_call(args, 4, 64, "resnet101")
+    powersgd_single_call(args, 8, 64, "resnet101")
+    powersgd_single_call(args, 16, 64, "resnet101")
     
     # topk_single_call_reducer(args, 0.1, 64, "resnet50")
     # topk_single_call_reducer(args, 0.01, 64, "resnet50")
@@ -898,16 +898,16 @@ if __name__ == "__main__":
     # mstopk_serial(args, 0.001, 64, "resnet50")
     # mstopk_single_call_reducer(args, 0.01, 64, "resnet50")
     # mstopk_serial(args, 0.01, 64, "resnet50")
-    mstopk_single_call_reducer(args, 0.1, 64, "resnet50")
-    mstopk_serial(args, 0.1, 64, "resnet50")
+    # mstopk_single_call_reducer(args, 0.1, 64, "resnet50")
+    # mstopk_serial(args, 0.1, 64, "resnet50")
 
 
-    mstopk_serial(args, 0.001, 64, "resnet101")
-    mstopk_single_call_reducer(args, 0.001, 64, "resnet101")
-    mstopk_serial(args, 0.01, 64, "resnet101")
-    mstopk_single_call_reducer(args, 0.01, 64, "resnet101")
-    mstopk_serial(args, 0.1, 64, "resnet101")
-    mstopk_single_call_reducer(args, 0.1, 64, "resnet101")
+    # mstopk_serial(args, 0.001, 64, "resnet101")
+    # mstopk_single_call_reducer(args, 0.001, 64, "resnet101")
+    # mstopk_serial(args, 0.01, 64, "resnet101")
+    # mstopk_single_call_reducer(args, 0.01, 64, "resnet101")
+    # mstopk_serial(args, 0.1, 64, "resnet101")
+    # mstopk_single_call_reducer(args, 0.1, 64, "resnet101")
 
     # powersgd_resnet101(args, 4, 16)
     # powersgd_resnet101(args, 8, 16)
