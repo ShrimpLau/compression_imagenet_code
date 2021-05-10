@@ -895,12 +895,12 @@ if __name__ == "__main__":
 
 
 
-    # mstopk_single_call_reducer(args, 0.001, 64, "resnet50")
-    # mstopk_serial(args, 0.001, 64, "resnet50")
-    # mstopk_single_call_reducer(args, 0.01, 64, "resnet50")
-    # mstopk_serial(args, 0.01, 64, "resnet50")
-    # mstopk_single_call_reducer(args, 0.1, 64, "resnet50")
-    # mstopk_serial(args, 0.1, 64, "resnet50")
+    mstopk_single_call_reducer(args, 0.001, 64, "resnet50")
+    mstopk_serial(args, 0.001, 64, "resnet50")
+    mstopk_single_call_reducer(args, 0.01, 64, "resnet50")
+    mstopk_serial(args, 0.01, 64, "resnet50")
+    mstopk_single_call_reducer(args, 0.1, 64, "resnet50")
+    mstopk_serial(args, 0.1, 64, "resnet50")
 
 
     mstopk_serial(args, 0.001, 64, "resnet101")
