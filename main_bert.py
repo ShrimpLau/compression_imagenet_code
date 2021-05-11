@@ -702,6 +702,10 @@ def _get_compression_param(reducer_name, device, reducer_param):
                                                       device=device,
                                                       timer=timer,
                                                       compression=reducer_param)
+    if reducer_name == "MSTopK":
+        reducer = gradient_reducers.MsTopKReducer(random_seed=42,
+                                                  device=device, timer=timer,
+                                                  k=reducer_param)
     return reducer
 
 
