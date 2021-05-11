@@ -987,7 +987,7 @@ def powersgd_bert_integrated(args, psgd_rank):
         torch.cuda.synchronize()
 
         time_list.append(start_time.elapsed_time(stop_time))
-        if idx == 7:
+        if idx == 30:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
@@ -1401,16 +1401,20 @@ if __name__ == "__main__":
     print ("Dist connected")
     main_bert(args)
     # main_bert_single(args)
-    # powersgd_bert(args, 4)
-    # powersgd_bert(args, 8)
-    # powersgd_bert(args, 16)
+    powersgd_bert(args, 4)
+    powersgd_bert(args, 8)
+    powersgd_bert(args, 16)
 
     powersgd_bert_integrated(args, 4)
     powersgd_bert_integrated(args, 8)
     powersgd_bert_integrated(args, 16)
     
     topk_bert_single_call(args, 0.001)
+    mstopk_serial(args, 0.001)
     topk_bert_single_call(args, 0.01)
+    mstopk_serial(args, 0.01)
+    
+    # topk_bert_single_call(args, 0.01)
     # topk_bert(args, 0.2)
     # topk_bert(args, 0.1)
     # topk_bert(args, 0.01)
