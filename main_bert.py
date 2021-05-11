@@ -901,12 +901,12 @@ def powersgd_bert(args, psgd_rank):
         torch.cuda.synchronize()
 
         time_list.append(start_time.elapsed_time(stop_time))
-        if idx == 7:
+        if idx == 30:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "bert_powersgd_rank_{}_ddp_out_file_{}.json".format(
+            file_name = "bert_powersgd_serial_rank_{}_ddp_out_file_{}.json".format(
                 psgd_rank,global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -992,7 +992,7 @@ def powersgd_bert_integrated(args, psgd_rank):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "bert_powersgd_rank_{}_ddp_out_file_{}.json".format(
+            file_name = "bert_powersgd_overlap_rank_{}_ddp_out_file_{}.json".format(
                 psgd_rank,global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
