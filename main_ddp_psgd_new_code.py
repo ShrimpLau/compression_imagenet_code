@@ -379,6 +379,93 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
             print ("Done {}".format(network_name))
             break
 
+
+def encode_decode_signsgd(state, bucket):
+    """
+    signsgd in parallel
+    """
+    sign_compressor = gradient_reducers.SignCompressor()
+    # tensor_flat = TensorBuffer(bucket)
+    bits, sign_size = sign_compressor.compress(bucket)
+    copy_bits = [torch.empty_like(bits) for i in range(dist.get_world_size())]
+
+    fut = dist.all_gather(copy_bits, bits, group=dist.group.WORLD,
+                          async_op=True).get_future()
+    def decode(fut):
+        sum_of_signs = None
+        agg_tensor = fut.value()[0]
+        for their_bits in agg_tensor:
+            uncompressed = sign_compressor.uncompress(their_bits, sign_size)
+            if sum_of_signs is None:
+                sum_of_signs = uncompressed
+            else:
+                sum_of_signs += uncompressed
+        total_sign = sum_of_signs.sign()
+        return [total_sign]
+    return fut.then(decode)
+
+def signsgd_single_call_reducer(args, bsize, network_name):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    print("Assigned Device {}".format(assigned_device))
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__[network_name]()
+    model.to(assigned_device)
+
+
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
+   
+
+    model.register_comm_hook(state=None,
+                             hook=encode_decode_signsgd)
+
+    model.train()
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time.record() 
+        loss.backward() #we have the gradients
+        # grad_list = [p.grad for p in model.parameters()]
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        # reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time.record() 
+        torch.cuda.synchronize()
+        # for param in model.parameters():
+            # import ipdb; ipdb.set_trace()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_list.append(start_time.elapsed_time(stop_time))
+        if batch_idx == 50:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "{}_signsgd_overlap_out_file_{}_batch_size_{}.json".format(network_name,
+                                                                 global_rank,bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done {} TopK".format(network_name))
+            break
 def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
             
@@ -419,9 +506,6 @@ def encode_decode(state, bucket):
         rand = random.randint(0, len(l2)-(k-k1)+1)
         l = torch.cat((l1, l2[rand:rand+k-k1]))
     kai = tensor[l]
-
-
-
     del a
     del l
     # tensor = torch.ones_like(tensor, device=tensor.device, dtype=tensor.dtype)
@@ -877,13 +961,17 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 16, 32)
 
 
-    powersgd_single_call(args, 4, 64, "resnet50")
-    powersgd_single_call(args, 8, 64, "resnet50")
-    powersgd_single_call(args, 16, 64, "resnet50")
+    # powersgd_single_call(args, 4, 64, "resnet50")
+    # powersgd_single_call(args, 8, 64, "resnet50")
+    # powersgd_single_call(args, 16, 64, "resnet50")
     
-    powersgd_single_call(args, 4, 64, "resnet101")
-    powersgd_single_call(args, 8, 64, "resnet101")
-    powersgd_single_call(args, 16, 64, "resnet101")
+    # powersgd_single_call(args, 4, 64, "resnet101")
+    # powersgd_single_call(args, 8, 64, "resnet101")
+    # powersgd_single_call(args, 16, 64, "resnet101")
+
+
+    signsgd_single_call_reducer(args, 64, "resnet50")
+    signsgd_single_call_reducer(args, 64, "resnet101")
     
     # topk_single_call_reducer(args, 0.1, 64, "resnet50")
     # topk_single_call_reducer(args, 0.01, 64, "resnet50")
