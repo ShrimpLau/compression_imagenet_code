@@ -710,7 +710,7 @@ def powersgd_resnet101(args, psgd_rank, bsize):
             print ("Done Resnet 101")
             break
 
-def signsgd_resnet101(args):
+def signsgd_resnet101(args, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
@@ -730,7 +730,7 @@ def signsgd_resnet101(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    data = torch.randn((args.batch_size, 3, 224, 224))
+    data = torch.randn((bsize, 3, 224, 224))
     target = torch.randint(0,900, [args.batch_size])
 
     for batch_idx in range(100):
@@ -750,12 +750,12 @@ def signsgd_resnet101(args):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 10:
+        if batch_idx == 50:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet101_signsgd_out_file_{}.json".format(
+            file_name = "resnet101_signsgd_serial_out_file_{}.json".format(
                 global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -765,7 +765,7 @@ def signsgd_resnet101(args):
             print ("Done Resnet 101")
             break
 
-def signsgd_resnet50(args):
+def signsgd_resnet50(args, bsize):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
@@ -785,7 +785,7 @@ def signsgd_resnet50(args):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    data = torch.randn((args.batch_size, 3, 224, 224))
+    data = torch.randn((bsize, 3, 224, 224))
     target = torch.randint(0,900, [args.batch_size])
 
     for batch_idx in range(100):
@@ -805,12 +805,12 @@ def signsgd_resnet50(args):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 10:
+        if batch_idx == 50:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "resnet50_signsgd_out_file_{}.json".format(
+            file_name = "resnet50_signsgd_serial_out_file_{}.json".format(
                                                                    global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
@@ -1004,8 +1004,8 @@ if __name__ == "__main__":
     # powersgd_resnet101(args, 4, 32)
     # powersgd_resnet101(args, 8, 32)
     # powersgd_resnet101(args, 16, 32)
-    # signsgd_resnet50(args)
-    # signsgd_resnet101(args)
+    signsgd_resnet50(args)
+    signsgd_resnet101(args)
     # topk_resnet50(args, 0.2)
     # topk_resnet50(args, 0.1)
     # topk_resnet50(args, 0.01)
