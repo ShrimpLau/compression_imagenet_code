@@ -386,7 +386,7 @@ def encode_decode_signsgd(state, bucket):
     """
     sign_compressor = gradient_reducers.SignCompressor()
     # tensor_flat = TensorBuffer(bucket)
-    bits, sign_size = sign_compressor.compress(bucket)
+    bits, sign_size = sign_compressor.compress(bucket.get_tensors()[0])
     copy_bits = [torch.empty_like(bits) for i in range(dist.get_world_size())]
 
     fut = dist.all_gather(copy_bits, bits, group=dist.group.WORLD,
