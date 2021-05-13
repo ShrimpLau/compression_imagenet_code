@@ -1316,6 +1316,114 @@ def mstopk_serial(args, topk_k):
                                     "{}/{}".format(args.s3_prefix, file_name))
             print ("Done bert")
             break
+
+
+def encode_decode_signsgd(state, bucket):
+    """
+    signsgd in parallel
+    """
+    sign_compressor = gradient_reducers.SignCompressor()
+    # tensor_flat = TensorBuffer(bucket)
+    bits, sign_size = sign_compressor.compress(bucket.get_tensors()[0])
+    copy_bits = [torch.empty_like(bits) for i in range(dist.get_world_size())]
+
+    fut = dist.all_gather(copy_bits, bits, group=dist.group.WORLD,
+                          async_op=True).get_future()
+    def decode(fut):
+        sum_of_signs = None
+        agg_tensor = fut.value()[0]
+        for their_bits in agg_tensor:
+            uncompressed = sign_compressor.uncompress(their_bits, sign_size)
+            if sum_of_signs is None:
+                sum_of_signs = uncompressed
+            else:
+                sum_of_signs += uncompressed
+        total_sign = sum_of_signs.sign()
+        return [total_sign]
+    return fut.then(decode)
+
+
+def signsgd_bert_single_call(args):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 8 + args.local_rank
+
+    data_dir = "/home/ubuntu/bert_data/Sogou_data"
+    bert_config_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/bert_config.json"
+    task_name = "sogou"
+    vocab_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/vocab.txt"
+    do_lower_case = True
+    max_seq_length = args.max_seq_length
+    train_batch_size = args.batch_size
+    learning_rate = 1e-5
+    bert_config = BertConfig.from_json_file(bert_config_file)
+    processor = Sogou_Processor()
+    label_list = processor.get_labels()
+    tokenizer = tokenization.FullTokenizer(vocab_file=vocab_file,
+                                           do_lower_case=do_lower_case)
+    train_examples = processor.get_train_examples(data_dir)
+    model = BertForSequenceClassification(bert_config,
+                                          len(label_list)).to(assigned_device)
+    train_features = convert_examples_to_features(train_examples, label_list,
+                                                  max_seq_length, tokenizer)
+
+
+    all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+    all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+    all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+
+
+    state = [parameter for parameter in model.parameters()] 
+
+    train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
+    train_dataloader = DataLoader(train_data, train_batch_size)
+
+    start_time = torch.cuda.Event(enable_timing=True)
+    stop_time = torch.cuda.Event(enable_timing=True)
+    time_list = list()
+
+    model = torch.nn.parallel.DistributedDataParallel(model,
+                                                      device_ids=[args.local_rank],
+                                                      output_device=args.local_rank)
+    model.register_comm_hook(state=None, hook=encode_decode_signsgd)
+    # reducer = _get_compression_param("Topk", assigned_device, psgd_rank)
+
+    # memories = [torch.zeros_like(p) for p in model.parameters()]
+    # send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+
+    for idx, data in enumerate(train_dataloader):
+        batch = tuple(t.to(assigned_device) for t in data)
+        input_ids, input_mask, segment_ids, label_ids = batch
+        (loss, _) = model(input_ids, segment_ids, input_mask, label_ids)
+        torch.cuda.synchronize()
+        start_time.record()
+        loss.backward()
+        # grad_list = [parameter.grad for parameter in model.parameters()]
+
+        # for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            # send_bfr.data[:] = grad + memory
+        # reducer.reduce(send_buffers, grad_list, memories)
+
+        stop_time.record()
+        torch.cuda.synchronize()
+
+        time_list.append(start_time.elapsed_time(stop_time))
+        if idx == 50:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['timing_log'] = time_list
+            file_name = "bert_signsgd_overlap_out_file_{}.json".format(global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name, 
+                                    "{}/{}".format(args.s3_prefix, file_name))
+            print ("Done bert")
+            break
+
+
 def signsgd_bert(args):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
@@ -1379,12 +1487,12 @@ def signsgd_bert(args):
         torch.cuda.synchronize()
 
         time_list.append(start_time.elapsed_time(stop_time))
-        if idx == 7:
+        if idx == 50:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "bert_signsgd_out_file_{}.json".format(global_rank)
+            file_name = "bert_signsgd_serial_out_file_{}.json".format(global_rank)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
             file_uploader.push_file(file_name, 
@@ -1405,22 +1513,23 @@ if __name__ == "__main__":
     print ("Dist connected")
     main_bert(args)
     # main_bert_single(args)
-    powersgd_bert(args, 4)
-    powersgd_bert(args, 8)
-    powersgd_bert(args, 16)
+    # powersgd_bert(args, 4)
+    # powersgd_bert(args, 8)
+    # powersgd_bert(args, 16)
 
-    powersgd_bert_integrated(args, 4)
-    powersgd_bert_integrated(args, 8)
-    powersgd_bert_integrated(args, 16)
+    # powersgd_bert_integrated(args, 4)
+    # powersgd_bert_integrated(args, 8)
+    # powersgd_bert_integrated(args, 16)
     
-    topk_bert_single_call(args, 0.001)
-    mstopk_serial(args, 0.001)
-    topk_bert_single_call(args, 0.01)
-    mstopk_serial(args, 0.01)
+    # topk_bert_single_call(args, 0.001)
+    # mstopk_serial(args, 0.001)
+    # topk_bert_single_call(args, 0.01)
+    # mstopk_serial(args, 0.01)
     
     # topk_bert_single_call(args, 0.01)
     # topk_bert(args, 0.2)
     # topk_bert(args, 0.1)
     # topk_bert(args, 0.01)
+    signsgd_bert(args)
     # signsgd_bert(args)
-    # signsgd_bert(args)
+    signsgd_bert_single_call(args)
