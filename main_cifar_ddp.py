@@ -167,8 +167,8 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
         torch.cuda.synchronize()
         start_time.record() 
         loss.backward() #we have the gradients
-        grad_list = [p.grad for p in model.parameters()]
-        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            for grad, memory, send_bfr in zip([p.grad for p in
+                                               model.parameters()], memories, send_buffers):
             send_bfr.data[:] = grad + memory
         reducer.reduce(send_buffers, grad_list, memories)
         # we have the gradients synchronized
@@ -177,6 +177,7 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
+        model.zero_grad()
         if batch_idx == 30:
             file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
