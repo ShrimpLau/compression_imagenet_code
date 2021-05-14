@@ -157,7 +157,7 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
     stop_time = torch.cuda.Event(enable_timing=True)
     time_list = list()
 
-    data = torch.randn((bsize, 3, 224, 224))
+    data = torch.randn((bsize, 3, 32, 32))
     target = torch.randint(0,9, [bsize])
 
     for batch_idx in range(100):
@@ -269,11 +269,11 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    # powersgd_single_call(args, 4, 128, "ResNet18")
-    # powersgd_single_call(args, 8, 128, "ResNet18")
-    # powersgd_single_call(args, 16, 128, "ResNet18")
+    powersgd_single_call(args, 4, 128, "ResNet18")
+    powersgd_single_call(args, 8, 128, "ResNet18")
+    powersgd_single_call(args, 16, 128, "ResNet18")
 
-    # print("powersgd single call") 
+    print("powersgd single call") 
     powersgd_serial_originial(args, 4, 128, "ResNet18")
     powersgd_serial_originial(args, 8, 128, "ResNet18")
     powersgd_serial_originial(args, 16, 128, "ResNet18")
