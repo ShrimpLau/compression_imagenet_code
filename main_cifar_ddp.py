@@ -272,9 +272,10 @@ if __name__ == "__main__":
     powersgd_single_call(args, 8, 128, "ResNet18")
     powersgd_single_call(args, 16, 128, "ResNet18")
 
-    
+    print("powersgd single call") 
     powersgd_serial_originial(args, 4, 128, "ResNet18")
     powersgd_serial_originial(args, 8, 128, "ResNet18")
     powersgd_serial_originial(args, 16, 128, "ResNet18")
-
+    print ("powersgd serial")
     ddp_training(args, 128, "ResNet18")
+    print ("powersgd ddp")
