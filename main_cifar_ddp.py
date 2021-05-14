@@ -82,9 +82,6 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
     # model = models.__dict__[network_name]()
     model.to(assigned_device)
 
-    memories = [torch.zeros_like(p) for p in model.parameters()]
-    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
-
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
                           weight_decay=0.0001)
@@ -204,8 +201,6 @@ def ddp_training(args, bsize, network_name):
     # model = models.__dict__[network_name]()
     model.to(assigned_device)
 
-    memories = [torch.zeros_like(p) for p in model.parameters()]
-    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
 
     criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
@@ -277,7 +272,7 @@ if __name__ == "__main__":
     powersgd_single_call(args, 8, 128, "ResNet18")
     powersgd_single_call(args, 16, 128, "ResNet18")
 
-
+    
     powersgd_serial_originial(args, 4, 128, "ResNet18")
     powersgd_serial_originial(args, 8, 128, "ResNet18")
     powersgd_serial_originial(args, 16, 128, "ResNet18")
