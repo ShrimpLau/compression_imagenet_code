@@ -23,6 +23,10 @@ import gradient_reducers
 import s3_utils
 from timer import Timer
 
+def metric(*args, **kwargs):
+    if True == 0:
+        log_metric(*args, **kwargs)
+
 import cifar_architectures
 timer = Timer(verbosity_level=2, log_fn=metric)
 
