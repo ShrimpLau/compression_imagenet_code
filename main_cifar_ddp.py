@@ -104,7 +104,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
     time_list = list()
 
     data = torch.randn((bsize, 3, 32, 32))
-    target = torch.randint(0,900, [bsize])
+    target = torch.randint(0,9, [bsize])
 
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
@@ -161,7 +161,7 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
     time_list = list()
 
     data = torch.randn((bsize, 3, 224, 224))
-    target = torch.randint(0,900, [bsize])
+    target = torch.randint(0,9, [bsize])
 
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
@@ -226,7 +226,7 @@ def ddp_training(args, bsize, network_name):
     time_list = list()
 
     data = torch.randn((bsize, 3, 32, 32))
-    target = torch.randint(0,900, [bsize])
+    target = torch.randint(0,9, [bsize])
 
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
