@@ -167,7 +167,7 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
         torch.cuda.synchronize()
         start_time.record() 
         loss.backward() #we have the gradients
-            for grad, memory, send_bfr in zip([p.grad for p in
+        for grad, memory, send_bfr in zip([p.grad for p in
                                                model.parameters()], memories, send_buffers):
             send_bfr.data[:] = grad + memory
         reducer.reduce(send_buffers, grad_list, memories)
