@@ -124,7 +124,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "{}_powersgd_overlap_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
+            file_name = "{}_cifar10_powersgd_overlap_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
                                                                                           global_rank,
                                                                                           bsize)
             with open(file_name, "w") as fout:
@@ -181,7 +181,7 @@ def powersgd_serial_originial(args, psgd_rank, bsize, network_name):
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
-            file_name = "{}_powersgd_serial_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
+            file_name = "{}_cifar10_powersgd_serial_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
                                                                                            global_rank,
                                                                                            bsize)
             with open(file_name, "w") as fout:
