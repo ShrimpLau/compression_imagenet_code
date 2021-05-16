@@ -17,7 +17,7 @@ num_times = 4
 class Reducer:
     def __init__(self, random_seed, device, timer):
         self.rng = np.random.RandomState(random_seed)
-        M = 1024 * 1024
+        # M = 1024 * 1024
         # self.precalc_numbers = (
             # torch.from_numpy(self.rng.randn(128 * M)).to(device).type(torch.float32)
         # )
@@ -1108,9 +1108,9 @@ class ExactReducer(Reducer):
         :param grad_out: dictionary
         :param memory_out: dictionary
         """
-        with self.timer("reduce.zero_mem", verbosity=2):
-            for mem in memory_out:
-                mem.zero_()
+        # with self.timer("reduce.zero_mem", verbosity=2):
+            # for mem in memory_out:
+                # mem.zero_()
 
         with self.timer("reduce.build_lists", verbosity=2):
             list_in = grad_in
