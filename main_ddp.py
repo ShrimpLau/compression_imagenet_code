@@ -647,7 +647,7 @@ def topk_resnet101(args, topk_compression):
             print ("Done Resnet 101")
             break
 
-def fullcomm_serial(args, psgd_rank, bsize, network_name):
+def fullcomm_serial(args, bsize, network_name):
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     global_rank = args.node_rank * 4 + args.local_rank
