@@ -95,6 +95,11 @@ def _get_compression_param(reducer_name, device, reducer_param):
                                                       timer=timer,
                                                       compression=reducer_param)
 
+    if reducer_name == "ExactSerial":
+        reducer = gradient_reducers.ExactReducer(random_seed=42, device=device,
+                                                 timer=timer)
+
+
     return reducer
 
 
@@ -641,6 +646,74 @@ def topk_resnet101(args, topk_compression):
 
             print ("Done Resnet 101")
             break
+
+def fullcomm_serial(args, psgd_rank, bsize, network_name):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 4 + args.local_rank
+    model = models.__dict__[network_name]()
+    model.to(assigned_device)
+    
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+
+    criterion = torch.nn.CrossEntropyLoss().to(assigned_device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,
+                          weight_decay=0.0001)
+    # None compression parameter
+    reducer = _get_compression_param("ExactSerial", assigned_device, None)
+    
+    model.train()
+    start_time_backward = torch.cuda.Event(enable_timing=True)
+    stop_time_backward = torch.cuda.Event(enable_timing=True)
+
+    start_time_comm = torch.cuda.Event(enable_timing=True)
+    stop_time_comm = torch.cuda.Event(enable_timing=True)
+    
+    time_comm_list = list()
+    time_backward_list = list() 
+
+    data = torch.randn((bsize, 3, 224, 224))
+    target = torch.randint(0,900, [bsize])
+
+    for batch_idx in range(100):
+        data, target = data.to(assigned_device), target.to(assigned_device)
+        output = model(data)
+        loss = criterion(output, target)
+        torch.cuda.synchronize()
+        start_time_backward.record() 
+        loss.backward() #we have the gradients
+        stop_time_backward.record()
+
+        start_time_comm.record()
+        grad_list = [p.grad for p in model.parameters()]
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+        # we have the gradients synchronized
+        stop_time_comm.record() 
+        torch.cuda.synchronize()
+        # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
+                                         # args.device))
+        time_comm_list.append(start_time_comm.elapsed_time(stop_time_comm))
+        time_backward_list.append(start_time_backward.elapsed_time(stop_time_backward))
+
+
+        if batch_idx == 50:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['comm_timing_log'] = time_comm_list
+            data_dict['backward_timing_log'] = time_backward_list
+            file_name ="{}_serial_full_out_file_{}_batch_size_{}.json".format(
+                network_name, global_rank, bsize)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name,
+                                    "{}/{}".format(args.s3_prefix, file_name))
+
+            print ("Done{}".format(network_name))
+            break
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
     # log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(args.device)
@@ -653,8 +726,15 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    main_resnet50_single_machine(args, 64)
-    main_resnet101_single(args, 64)
+    # main_resnet50_single_machine(args, 64)
+    # main_resnet101_single(args, 64)
+
+    main_fullcomm(args, 64, "resnet50")
+    main_fullcomm(args, 64, "resnet101")
+
+
+
+
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
     # main_resnet50(args, 64)
