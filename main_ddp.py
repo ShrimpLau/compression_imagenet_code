@@ -729,8 +729,8 @@ if __name__ == "__main__":
     # main_resnet50_single_machine(args, 64)
     # main_resnet101_single(args, 64)
 
-    main_fullcomm(args, 64, "resnet50")
-    main_fullcomm(args, 64, "resnet101")
+    fullcomm_serial(args, 64, "resnet50")
+    fullcomm_serial(args, 64, "resnet101")
 
 
 
