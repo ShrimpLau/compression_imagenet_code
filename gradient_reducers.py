@@ -1121,6 +1121,45 @@ class ExactReducer(Reducer):
 
         return bits_communicated
 
+class ExactReducerPs(Reducer):
+    def reduce(self, grad_in, grad_out, memory_out):
+        """
+        Reduce gradients between the workers in place
+        :param grad_in: dictionary
+        :param grad_out: dictionary
+        :param memory_out: dictionary
+        """
+        # with self.timer("reduce.zero_mem", verbosity=2):
+            # for mem in memory_out:
+                # mem.zero_()
+
+        with self.timer("reduce.build_lists", verbosity=2):
+            list_in = grad_in
+            list_out = grad_out
+        
+
+        tensor_to_reduce = torch.cat([l.view(-1) for l in list_in])
+
+        receive_tensor = torch.zeros(torch.zeros_like(tensor_to_reduce))
+        
+        if self.rank == 0:
+            for i in range(1, self.n_workers):
+                dist.recv(receive_tensor, src=i)
+                tensor_to_reduce += receive_tensor
+        else:
+            dist.send(tensor_to_reduce, dest=0)
+
+
+        dist.barrier()
+
+        dist.broadcast(tensor_to_reduce, src=0)
+        
+
+        # with self.timer("reduce.reduce", verbosity=2):
+            # bits_communicated = reduce_mean_list(self.device, list_in, list_out, self.timer)
+
+        return None 
+
 
 class AtomoReducer(Reducer):
     def __init__(self, random_seed, device, timer, rank=1):
