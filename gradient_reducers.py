@@ -1153,6 +1153,7 @@ class ExactReducerPs(Reducer):
 
         torch.distributed.broadcast(tensor_to_reduce, src=0)
         
+        torch.distributed.barrier()
 
         # with self.timer("reduce.reduce", verbosity=2):
             # bits_communicated = reduce_mean_list(self.device, list_in, list_out, self.timer)
