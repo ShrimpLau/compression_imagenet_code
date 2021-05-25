@@ -729,18 +729,21 @@ if __name__ == "__main__":
     # main_resnet50_single_machine(args, 64)
     # main_resnet101_single(args, 64)
 
-    fullcomm_serial(args, 64, "resnet50")
-    fullcomm_serial(args, 64, "resnet101")
+    # fullcomm_serial(args, 64, "resnet50")
+    # fullcomm_serial(args, 64, "resnet101")
 
 
 
 
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
-    # main_resnet50(args, 64)
+    main_resnet50(args, 64)
+
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
-    # main_resnet101(args, 16)
+    main_resnet101(args, 64)
+    powersgd_resnet50(args, 4, 64)
+    powersgd_resnet101(args, 4, 64)
     # powersgd_resnet50(args, 4, 16)
     # powersgd_resnet50(args, 8, 16)
     # powersgd_resnet50(args, 16, 16)
