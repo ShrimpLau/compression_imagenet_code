@@ -1140,7 +1140,7 @@ class ExactReducerPs(Reducer):
 
         tensor_to_reduce = torch.cat([l.view(-1) for l in list_in])
 
-        receive_tensor = torch.zeros(torch.zeros_like(tensor_to_reduce))
+        receive_tensor = torch.zeros_like(tensor_to_reduce)
         
         if self.rank == 0:
             for i in range(1, self.n_workers):
