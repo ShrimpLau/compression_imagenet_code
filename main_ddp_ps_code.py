@@ -783,7 +783,7 @@ def fullcomm_serial_ps(args, bsize, network_name):
             file_uploader.push_file(file_name,
                                     "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done{}".format(network_name))
+            print ("Done PS{}".format(network_name))
             break
 
 if __name__ == "__main__":
