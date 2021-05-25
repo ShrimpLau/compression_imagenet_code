@@ -709,6 +709,10 @@ def _get_compression_param(reducer_name, device, reducer_param):
     if reducer_name == "ExactSerial":
         reducer = gradient_reducers.ExactReducer(random_seed=42, device=device,
                                                  timer=timer)
+    
+    if reducer_name == "ExactSerial_ps":
+        reducer = gradient_reducers.ExactReducerPs(random_seed=42, device=device,
+                                                 timer=timer)
     return reducer
 
 
@@ -1590,6 +1594,95 @@ def fullcomm_serial(args):
                                     "{}/{}".format(args.s3_prefix, file_name))
             print ("Done bert")
             break
+
+def fullcomm_serial_ps(args):
+    assigned_device = "cuda:{}".format(args.local_rank)
+    torch.cuda.set_device(args.local_rank)
+    global_rank = args.node_rank * 8 + args.local_rank
+
+    data_dir = "/home/ubuntu/bert_data/Sogou_data"
+    bert_config_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/bert_config.json"
+    task_name = "sogou"
+    vocab_file = "/home/ubuntu/bert_data/chinese_L-12_H-768_A-12/vocab.txt"
+    do_lower_case = True
+    max_seq_length = args.max_seq_length
+    train_batch_size = args.batch_size
+    learning_rate = 1e-5
+    bert_config = BertConfig.from_json_file(bert_config_file)
+    processor = Sogou_Processor()
+    label_list = processor.get_labels()
+    tokenizer = tokenization.FullTokenizer(vocab_file=vocab_file,
+                                           do_lower_case=do_lower_case)
+    train_examples = processor.get_train_examples(data_dir)
+    model = BertForSequenceClassification(bert_config,
+                                          len(label_list)).to(assigned_device)
+    train_features = convert_examples_to_features(train_examples, label_list,
+                                                  max_seq_length, tokenizer)
+
+
+    all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+    all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+    all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+
+
+    state = [parameter for parameter in model.parameters()] 
+
+    train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
+    train_dataloader = DataLoader(train_data, train_batch_size)
+
+    start_time_backward = torch.cuda.Event(enable_timing=True)
+    stop_time_backward = torch.cuda.Event(enable_timing=True)
+
+    start_time_comm = torch.cuda.Event(enable_timing=True)
+    stop_time_comm = torch.cuda.Event(enable_timing=True)
+    
+    time_comm_list = list()
+    time_backward_list = list() 
+
+    reducer = _get_compression_param("ExactSerial_ps", assigned_device, None)
+
+    memories = [torch.zeros_like(p) for p in model.parameters()]
+    send_buffers = [torch.zeros_like(p) for p in model.parameters()]
+
+    for idx, data in enumerate(train_dataloader):
+        batch = tuple(t.to(assigned_device) for t in data)
+        input_ids, input_mask, segment_ids, label_ids = batch
+        (loss, _) = model(input_ids, segment_ids, input_mask, label_ids)
+        torch.cuda.synchronize()
+        start_time_backward.record()
+        loss.backward()
+        stop_time_backward.record()
+        
+        start_time_comm.record()
+        grad_list = [parameter.grad for parameter in model.parameters()]
+
+        for grad, memory, send_bfr in zip(grad_list, memories, send_buffers):
+            send_bfr.data[:] = grad + memory
+        reducer.reduce(send_buffers, grad_list, memories)
+
+        stop_time_comm.record()
+        torch.cuda.synchronize()
+
+        time_comm_list.append(start_time_comm.elapsed_time(stop_time_comm))
+
+        time_backward_list.append(start_time_backward.elapsed_time(stop_time_backward))
+
+        if idx == 50:
+            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            data_dict = dict()
+            data_dict['args'] = args.__str__()
+            data_dict['comm_timing_log'] = time_comm_list
+            data_dict['backward_timing_log'] = time_backward_list
+            file_name = "bert_serial_full_out_ps_file_{}.json".format(global_rank)
+            with open(file_name, "w") as fout:
+                json.dump(data_dict, fout)
+            file_uploader.push_file(file_name, 
+                                    "{}/{}".format(args.s3_prefix, file_name))
+            print ("Done bert")
+            break
+
 if __name__ == "__main__":
     args = parse_args(argparse.ArgumentParser(description="Large Scale Verification"))
     log_file_name = os.path.basename(args.log_file).split(".")[0]+"_args_logged_{}.log".format(9)
@@ -1602,9 +1695,9 @@ if __name__ == "__main__":
     print (args)
     dist.init_process_group(backend="NCCL", init_method="env://")
     print ("Dist connected")
-    main_bert(args)
+    # main_bert(args)
     # main_bert_single(args)
-    powersgd_bert(args, 4)
+    # powersgd_bert(args, 4)
     # powersgd_bert(args, 8)
     # powersgd_bert(args, 16)
 
@@ -1625,4 +1718,5 @@ if __name__ == "__main__":
     # signsgd_bert(args)
     # signsgd_bert_single_call(args)
 
-    # fullcomm_serial(args)
+    fullcomm_serial_ps(args)
+
