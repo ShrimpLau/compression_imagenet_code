@@ -952,7 +952,6 @@ if __name__ == "__main__":
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
     # main_resnet101(args, 16)
-    main_resnet101(args, 64)
     # powersgd_resnet50(args, 4, 16)
     # powersgd_resnet50(args, 8, 16)
     # powersgd_resnet50(args, 16, 16)
@@ -1004,7 +1003,7 @@ if __name__ == "__main__":
 
     # powersgd_resnet101(args, 4, 32)
     # powersgd_resnet101(args, 8, 32)
-    # powersgd_resnet101(args, 16, 32)
+    powersgd_resnet101(args, 4, 64)
     # signsgd_resnet50(args, 64)
     # signsgd_resnet101(args, 64)
     # topk_resnet50(args, 0.2)
