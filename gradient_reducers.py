@@ -1146,7 +1146,7 @@ class ExactReducerPs(Reducer):
                 torch.distributed.recv(receive_tensor, src=i)
                 tensor_to_reduce += receive_tensor
         else:
-            torch.distributed.send(tensor_to_reduce, dest=0)
+            torch.distributed.send(tensor_to_reduce, 0)
 
 
         torch.distributed.barrier()
