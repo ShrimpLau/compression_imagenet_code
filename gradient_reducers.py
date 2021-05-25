@@ -4,7 +4,6 @@ import os
 import time
 from contextlib import contextmanager
 from typing import List
-
 import numpy as np
 import torch
 
@@ -1144,15 +1143,15 @@ class ExactReducerPs(Reducer):
         
         if self.rank == 0:
             for i in range(1, self.n_workers):
-                dist.recv(receive_tensor, src=i)
+                torch.distributed.recv(receive_tensor, src=i)
                 tensor_to_reduce += receive_tensor
         else:
-            dist.send(tensor_to_reduce, dest=0)
+            torch.distributed.send(tensor_to_reduce, dest=0)
 
 
-        dist.barrier()
+        torch.distributed.barrier()
 
-        dist.broadcast(tensor_to_reduce, src=0)
+        torch.distributed.broadcast(tensor_to_reduce, src=0)
         
 
         # with self.timer("reduce.reduce", verbosity=2):
