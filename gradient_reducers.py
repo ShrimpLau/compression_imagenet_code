@@ -869,6 +869,9 @@ class MsTopKReducer(Reducer):
         self.k = k
         self.N = 100
     def reduce(self, grad_in, grad_out):
+        start_time = torch.cuda.Event(enable_timing=True)
+        stop_time = torch.cuda.Event(enable_timing=True)
+        start.record()
         grad_in = list_to_tensor(grad_in)
         grad_1d = grad_in.reshape(-1) #reshaping to 1d
         k = int(self.k*len(grad_1d)) #change percent to actual number
@@ -906,7 +909,8 @@ class MsTopKReducer(Reducer):
             l = torch.cat((l1, l2[rand:rand+k-k1]))
             # print ("Actual if")
         kai = grad_1d[l]
-
+        stop_time.record()
+        print ("Time taken {}".format(start_time.elapsed_time(stop_time)))
         kai = torch.zeros((k), device=kai.device, dtype=kai.dtype)
         l = torch.zeros((k), device=l.device, dtype=l.dtype)
         index_list = [torch.zeros_like(l, device=l.device, dtype=l.dtype) for _ in range(self.n_workers)]
