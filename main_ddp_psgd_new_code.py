@@ -946,8 +946,8 @@ if __name__ == "__main__":
     # main_resnet50(args, 16)
     # main_resnet50(args, 32)
 
-    main_resnet50(args, 64)
-    main_resnet101(args, 64)
+    # main_resnet50(args, 64)
+    # main_resnet101(args, 64)
 
     # main_resnet101(args, 16)
     # main_resnet101(args, 32)
@@ -956,7 +956,7 @@ if __name__ == "__main__":
     # powersgd_resnet50(args, 8, 16)
     # powersgd_resnet50(args, 16, 16)
 
-    powersgd_resnet50(args, 4, 64)
+    # powersgd_resnet50(args, 4, 64)
     # powersgd_resnet50(args, 8, 32)
     # powersgd_resnet50(args, 16, 32)
 
@@ -983,9 +983,9 @@ if __name__ == "__main__":
     # topk_single_call_reducer(args, 0.01, 64, "resnet101")
 
     # mstopk_single_call_reducer(args, 0.001, 64, "resnet50")
-    # mstopk_serial(args, 0.001, 64, "resnet50")
+    mstopk_serial(args, 0.001, 64, "resnet50")
     # mstopk_single_call_reducer(args, 0.01, 64, "resnet50")
-    # mstopk_serial(args, 0.01, 64, "resnet50")
+    mstopk_serial(args, 0.01, 64, "resnet50")
     # mstopk_single_call_reducer(args, 0.1, 64, "resnet50")
     # mstopk_serial(args, 0.1, 64, "resnet50")
 
