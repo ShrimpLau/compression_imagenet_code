@@ -346,7 +346,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
 
     data = torch.randn((bsize, 3, 224, 224))
     target = torch.randint(0,900, [bsize])
-
+    torch.cuda.nvtx.range_push("test")
     for batch_idx in range(100):
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
@@ -363,22 +363,22 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
         torch.cuda.synchronize()
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
-        time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
-            # file_uploader = s3_utils.uploadFile("large-scale-compression")
-            data_dict = dict()
-            data_dict['args'] = args.__str__()
-            data_dict['timing_log'] = time_list
-            file_name = "{}_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
-                                                                                          global_rank,
-                                                                                          bsize)
-            with open(file_name, "w") as fout:
-                json.dump(data_dict, fout)
-            # file_uploader.push_file(file_name,
-                                    # "{}/{}".format(args.s3_prefix, file_name))
+    torch.cuda.nvtx.range_pop()
+        # time_list.append(start_time.elapsed_time(stop_time))
+        # if batch_idx == 30:
+            # # file_uploader = s3_utils.uploadFile("large-scale-compression")
+            # data_dict = dict()
+            # data_dict['args'] = args.__str__()
+            # data_dict['timing_log'] = time_list
+            # file_name = "{}_powersgd_rank_{}_out_file_{}_batch_size_{}.json".format(network_name, psgd_rank,
+                                                                                          # global_rank,
+                                                                                          # bsize)
+            # with open(file_name, "w") as fout:
+                # json.dump(data_dict, fout)
+            # # file_uploader.push_file(file_name,
+                                    # # "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done {}".format(network_name))
-            break
+            # print ("Done {}".format(network_name))
 
 
 def encode_decode_signsgd(state, bucket):
