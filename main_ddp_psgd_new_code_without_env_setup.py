@@ -52,7 +52,7 @@ def parse_args(parser):
                         help="Number of total  workers")
     parser.add_argument("--s3-prefix", type=str, default=None, 
                         help="s3-prefix to write")
-    parser.add_argument("--node_rank", type=int)
+    parser.add_argument("--node_rank", type=int, default=1)
     args = parser.parse_args()
     return args
 
@@ -940,7 +940,7 @@ if __name__ == "__main__":
     print ("In If")
     print (args)
     dist.init_process_group(backend="NCCL", init_method="tcp://127.0.0.1:2345",
-                            world_size=args.world_size, rank=args.rank)
+                            world_size=args.world_size, rank=args.local_rank)
     # import ipdb; ipdb.set_trace()
     print ("Dist connected")
     # main_resnet50_single_machine(args, 64)
