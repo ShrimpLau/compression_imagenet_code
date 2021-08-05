@@ -869,6 +869,7 @@ class MsTopKReducer(Reducer):
         self.k = k
         self.N = 100
     def reduce(self, grad_in, grad_out):
+        torch.cuda.nvtx.range_push("test")
         start_time = torch.cuda.Event(enable_timing=True)
         stop_time = torch.cuda.Event(enable_timing=True)
         start.record()
@@ -924,6 +925,7 @@ class MsTopKReducer(Reducer):
         for idx, vals in zip(index_list, value_list):
             grad_accum[idx] += vals
         
+        torch.cuda.nvtx.range_pop()
         # print ("Starting element copy") 
         # start_index = 0
         # for idx, ts in enumerate(grad_out):

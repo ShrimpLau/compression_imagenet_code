@@ -582,21 +582,21 @@ def mstopk_single_call_reducer(args, topk_k, bsize, network_name):
             # import ipdb; ipdb.set_trace()
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
                                          # args.device))
-        time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 30:
-            file_uploader = s3_utils.uploadFile("large-scale-compression")
-            data_dict = dict()
-            data_dict['args'] = args.__str__()
-            data_dict['timing_log'] = time_list
-            file_name = "{}_mstopk_overlap_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
-                                                                 topk_k,global_rank,bsize)
-            with open(file_name, "w") as fout:
-                json.dump(data_dict, fout)
-            file_uploader.push_file(file_name,
-                                    "{}/{}".format(args.s3_prefix, file_name))
+        # time_list.append(start_time.elapsed_time(stop_time))
+        # if batch_idx == 30:
+            # file_uploader = s3_utils.uploadFile("large-scale-compression")
+            # data_dict = dict()
+            # data_dict['args'] = args.__str__()
+            # data_dict['timing_log'] = time_list
+            # file_name = "{}_mstopk_overlap_k_{}_out_file_{}_batch_size_{}.json".format(network_name,
+                                                                 # topk_k,global_rank,bsize)
+            # with open(file_name, "w") as fout:
+                # json.dump(data_dict, fout)
+            # file_uploader.push_file(file_name,
+                                    # "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done {} TopK".format(network_name))
-            break
+            # print ("Done {} TopK".format(network_name))
+            # break
             
 
 def mstopk_serial(args, topk_k, bsize, network_name):
