@@ -385,24 +385,34 @@ def encode_decode_signsgd(state, bucket):
     """
     signsgd in parallel
     """
-    sign_compressor = gradient_reducers.SignCompressor()
-    # tensor_flat = TensorBuffer(bucket)
-    bits, sign_size = sign_compressor.compress(bucket.get_tensors()[0])
-    copy_bits = [torch.empty_like(bits) for i in range(dist.get_world_size())]
+    with torch.cuda.stream(t):
+        torch.cuda.nvtx.range_push("encode")
+        sign_compressor = gradient_reducers.SignCompressor()
+        print("Range push")
+        # tensor_flat = TensorBuffer(bucket)
+        bits, sign_size = sign_compressor.compress(bucket.get_tensors()[0])
+        copy_bits = [torch.empty_like(bits) for i in range(dist.get_world_size())]
 
-    fut = dist.all_gather(copy_bits, bits, group=dist.group.WORLD,
-                          async_op=True).get_future()
+        torch.cuda.nvtx.range_pop()
+        fut = dist.all_gather(copy_bits, bits, group=dist.group.WORLD,
+                              async_op=True).get_future()
+
+
     def decode(fut):
-        sum_of_signs = None
-        agg_tensor = fut.value()[0]
-        for their_bits in agg_tensor:
-            uncompressed = sign_compressor.uncompress(their_bits, sign_size)
-            if sum_of_signs is None:
-                sum_of_signs = uncompressed
-            else:
-                sum_of_signs += uncompressed
-        total_sign = sum_of_signs.sign()
-        return [total_sign]
+        torch.cuda.nvtx.range_push("decode")
+        with torch.cuda.stream(t):
+            sum_of_signs = None
+            agg_tensor = fut.value()[0]
+            for their_bits in agg_tensor:
+                uncompressed = sign_compressor.uncompress(their_bits, sign_size)
+                if sum_of_signs is None:
+                    sum_of_signs = uncompressed
+                else:
+                    sum_of_signs += uncompressed
+            total_sign = sum_of_signs.sign()
+            torch.cuda.nvtx.range_pop()
+            t.synchronize()
+            return [total_sign]
     return fut.then(decode)
 
 def signsgd_single_call_reducer(args, bsize, network_name):
@@ -434,7 +444,9 @@ def signsgd_single_call_reducer(args, bsize, network_name):
     data = torch.randn((bsize, 3, 224, 224))
     target = torch.randint(0,900, [bsize])
 
-    for batch_idx in range(100):
+    torch.cuda.cudart().cudaProfilerStart()
+    for batch_idx in range(10):
+        print (batch_idx)
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
@@ -451,29 +463,31 @@ def signsgd_single_call_reducer(args, bsize, network_name):
         # for param in model.parameters():
             # import ipdb; ipdb.set_trace()
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
-                                         # args.device))
-        time_list.append(start_time.elapsed_time(stop_time))
-        if batch_idx == 50:
-            file_uploader = s3_utils.uploadFile("large-scale-compression")
-            data_dict = dict()
-            data_dict['args'] = args.__str__()
-            data_dict['timing_log'] = time_list
-            file_name = "{}_signsgd_overlap_out_file_{}_batch_size_{}.json".format(network_name,
-                                                                 global_rank,bsize)
-            with open(file_name, "w") as fout:
-                json.dump(data_dict, fout)
-            file_uploader.push_file(file_name,
-                                    "{}/{}".format(args.s3_prefix, file_name))
+                                         # # args.device))
+        # time_list.append(start_time.elapsed_time(stop_time))
+        # if batch_idx == 50:
+            # # file_uploader = s3_utils.uploadFile("large-scale-compression")
+            # data_dict = dict()
+            # data_dict['args'] = args.__str__()
+            # data_dict['timing_log'] = time_list
+            # # file_name = "{}_signsgd_overlap_out_file_{}_batch_size_{}.json".format(network_name,
+                                                                 # global_rank,bsize)
+            # with open(file_name, "w") as fout:
+                # json.dump(data_dict, fout)
+            # # file_uploader.push_file(file_name,
+                                    # # "{}/{}".format(args.s3_prefix, file_name))
 
-            print ("Done {} TopK".format(network_name))
-            break
-s = torch.cuda.Stream()
+    torch.cuda.cudart().cudaProfilerStop()
+            # print ("Done {} TopK".format(network_name))
+            # break
+# s = torch.cuda.Stream()
 t = torch.cuda.Stream()
 def encode_decode(state, bucket):
     # tensors = [ t/dist.world_size for t in bucket.get_tensors()]
             
     # print (state)
-    with torch.cuda.stream(s):
+    with torch.cuda.stream(t):
+        torch.cuda.nvtx.range_push("encode")
         tensor = bucket.get_tensors()[0]
         k = int(state['k']*len(tensor))
         N = state['N']
@@ -521,7 +535,9 @@ def encode_decode(state, bucket):
 
         # idx_list = [torch.zeros_like(l, device=l.device,
                     # dtype=l.dtype) for _ in range(world_size)]
-    s.synchronize()
+    t.synchronize()
+
+    torch.cuda.nvtx.range_pop()
     dist.all_gather(out_list, kai, group=group_to_use,
                     async_op=True)
 
@@ -531,6 +547,7 @@ def encode_decode(state, bucket):
 
     def decode(fut):
         with torch.cuda.stream(t):
+            torch.cuda.nvtx.range_push("decode")
             agg_tensor = fut.value()[0]
             fut_tensor = grad_1d
             out_tensor = torch.zeros_like(fut_tensor, device=tensor.device,
@@ -539,6 +556,7 @@ def encode_decode(state, bucket):
                 out_tensor[:len(gt)] += gt
             # print (out_tensor) 
         t.synchronize()
+        torch.cuda.nvtx.range_pop()
         return [out_tensor]
     return fut.then(decode)
             
@@ -569,8 +587,9 @@ def mstopk_single_call_reducer(args, topk_k, bsize, network_name):
 
     data = torch.randn((bsize, 3, 224, 224))
     target = torch.randint(0,900, [bsize])
-
-    for batch_idx in range(100):
+    torch.cuda.cudart().cudaProfilerStart()
+    for batch_idx in range(10):
+        print (batch_idx)
         data, target = data.to(assigned_device), target.to(assigned_device)
         output = model(data)
         loss = criterion(output, target)
@@ -584,6 +603,8 @@ def mstopk_single_call_reducer(args, topk_k, bsize, network_name):
         # we have the gradients synchronized
         stop_time.record() 
         torch.cuda.synchronize()
+
+    torch.cuda.cudart().cudaProfilerStop()
         # for param in model.parameters():
             # import ipdb; ipdb.set_trace()
         # print ("Time {}, Device {}".format(start_time.elapsed_time(stop_time),
@@ -978,7 +999,7 @@ if __name__ == "__main__":
     # powersgd_single_call(args, 16, 64, "resnet101")
 
 
-    # signsgd_single_call_reducer(args, 64, "resnet50")
+    signsgd_single_call_reducer(args, 16, "resnet50")
     # signsgd_single_call_reducer(args, 64, "resnet101")
     
     # topk_single_call_reducer(args, 0.1, 64, "resnet50")
@@ -990,7 +1011,7 @@ if __name__ == "__main__":
     # topk_single_call_reducer(args, 0.001, 64, "resnet101")
     # topk_single_call_reducer(args, 0.01, 64, "resnet101")
 
-    mstopk_single_call_reducer(args, 0.001, 16, "resnet50")
+    # mstopk_single_call_reducer(args, 0.001, 16, "resnet50")
     # mstopk_serial(args, 0.001, 64, "resnet50")
     # mstopk_single_call_reducer(args, 0.01, 64, "resnet50")
     # mstopk_serial(args, 0.01, 64, "resnet50")
