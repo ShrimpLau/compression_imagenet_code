@@ -19,7 +19,7 @@ from torch.autograd import Variable
 
 import torch.distributed.algorithms.ddp_comm_hooks.powerSGD_hook as PowerSGD
 import gradient_reducers
-import s3_utils
+# import s3_utils
 from timer import Timer
 
 def metric(*args, **kwargs):
