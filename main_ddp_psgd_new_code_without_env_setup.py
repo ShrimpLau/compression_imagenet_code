@@ -365,7 +365,7 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
                                          # args.device))
         time_list.append(start_time.elapsed_time(stop_time))
         if batch_idx == 30:
-            file_uploader = s3_utils.uploadFile("large-scale-compression")
+            # file_uploader = s3_utils.uploadFile("large-scale-compression")
             data_dict = dict()
             data_dict['args'] = args.__str__()
             data_dict['timing_log'] = time_list
@@ -374,8 +374,8 @@ def powersgd_single_call(args, psgd_rank, bsize, network_name):
                                                                                           bsize)
             with open(file_name, "w") as fout:
                 json.dump(data_dict, fout)
-            file_uploader.push_file(file_name,
-                                    "{}/{}".format(args.s3_prefix, file_name))
+            # file_uploader.push_file(file_name,
+                                    # "{}/{}".format(args.s3_prefix, file_name))
 
             print ("Done {}".format(network_name))
             break
