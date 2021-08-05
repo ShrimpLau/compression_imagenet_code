@@ -693,22 +693,22 @@ def test_gloo_gather(args):
             world_size = dist.get_world_size()
             accum_list = [torch.zeros() for i in range(world_size)] 
             dist.gather(tensor_rand, accum_list)
-         dist.broadcast(tensor_rand, 0)
-         stop_time_backward.record()
-         torch.cuda.synchronize()
-         time_taken = start_time_backward.elapsed_time(stop_time_backward)
-         time_list.append(time_taken)
-         print(time_taken)
-     data_dict = dict()
-     data_dict["timing_log"] = time_list
-     file_uploader = s3_utils.uploadFile("large-scale-compression")
-     file_name = "gloo_all_gather_broadcast_{}.json".format(global_rank)
-     with open(file_name, "w") as fout:
-         json.dump(data_dict, fout)
-     file_uploader.push_file(file_name, "{}/{}".format(args.s3_prefix,
+        dist.broadcast(tensor_rand, 0)
+        stop_time_backward.record()
+        torch.cuda.synchronize()
+        time_taken = start_time_backward.elapsed_time(stop_time_backward)
+        time_list.append(time_taken)
+        print(time_taken)
+    data_dict = dict()
+    data_dict["timing_log"] = time_list
+    file_uploader = s3_utils.uploadFile("large-scale-compression")
+    file_name = "gloo_all_gather_broadcast_{}.json".format(global_rank)
+    with open(file_name, "w") as fout:
+        json.dump(data_dict, fout)
+    file_uploader.push_file(file_name, "{}/{}".format(args.s3_prefix,
                                                        file_name))
-     print("Done all gather")
-     return None
+    print("Done all gather")
+    return None
 
 
 def fullcomm_serial(args, bsize, network_name):
