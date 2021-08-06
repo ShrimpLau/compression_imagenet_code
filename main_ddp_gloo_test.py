@@ -655,7 +655,7 @@ def test_gloo_all_gather(args):
     global_rank = args.node_rank * 4 + args.local_rank
     tensor_rand = torch.rand(array_size, device=assigned_device)
     world_size = dist.get_world_size()
-    accum_list = [torch.zeros() for i in range(world_size)]
+    accum_list = [torch.zeros_like(tensor_rand) for i in range(world_size)]
     time_list = list()
     start_time_backward = torch.cuda.Event(enable_timing=True)
     stop_time_backward = torch.cuda.Event(enable_timing=True)
@@ -691,7 +691,7 @@ def test_gloo_gather(args):
         start_time_backward.record()
         if dist.get_rank() == 0:
             world_size = dist.get_world_size()
-            accum_list = [torch.zeros() for i in range(world_size)] 
+            accum_list = [torch.zeros_like(tensor_rand) for i in range(world_size)] 
             dist.gather(tensor_rand, accum_list)
         dist.broadcast(tensor_rand, 0)
         stop_time_backward.record()
