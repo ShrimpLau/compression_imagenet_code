@@ -693,10 +693,10 @@ def test_gloo_gather(args):
     for i in range(100):
         print(i)
         start_time_backward.record()
-        if dist.get_rank() == 0:
-            world_size = dist.get_world_size()
-            accum_list = [torch.zeros_like(tensor_rand) for i in range(world_size)] 
-            dist.gather(tensor_rand, accum_list)
+        # if dist.get_rank() == 0:
+        world_size = dist.get_world_size()
+        accum_list = [torch.zeros_like(tensor_rand) for i in range(world_size)] 
+        dist.gather(tensor_rand, accum_list)
         dist.broadcast(tensor_rand, 0)
         stop_time_backward.record()
         torch.cuda.synchronize()
