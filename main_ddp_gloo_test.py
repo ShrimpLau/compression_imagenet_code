@@ -668,6 +668,7 @@ def test_gloo_all_gather(args):
         torch.cuda.synchronize()
         time_taken = start_time_backward.elapsed_time(stop_time_backward)
         time_list.append(time_taken)
+        print(time_taken)
     data_dict = dict()
     data_dict["timing_log"] = time_list
     file_uploader = s3_utils.uploadFile("large-scale-compression")
