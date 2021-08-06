@@ -649,6 +649,7 @@ def topk_resnet101(args, topk_compression):
 
 
 def test_gloo_all_gather(args):
+    print ("Test gloo all gather")
     array_size = 1000000
     assigned_device = "cuda:{}".format(args.local_rank)
     torch.cuda.set_device(args.local_rank)
@@ -660,6 +661,7 @@ def test_gloo_all_gather(args):
     start_time_backward = torch.cuda.Event(enable_timing=True)
     stop_time_backward = torch.cuda.Event(enable_timing=True)
     for i in range(100):
+        print(i)
         start_time_backward.record()
         dist.all_gather(accum_list, tensor_rand)
         stop_time_backward.record()
@@ -677,6 +679,7 @@ def test_gloo_all_gather(args):
     return None
 
 def test_gloo_gather(args):
+    print("Test gloo gather")
     start_time_backward = torch.cuda.Event(enable_timing=True)
     stop_time_backward = torch.cuda.Event(enable_timing=True)
     array_size = 1000000
@@ -688,6 +691,7 @@ def test_gloo_gather(args):
     start_time_backward = torch.cuda.Event(enable_timing=True)
     stop_time_backward = torch.cuda.Event(enable_timing=True)
     for i in range(100):
+        print(i)
         start_time_backward.record()
         if dist.get_rank() == 0:
             world_size = dist.get_world_size()
