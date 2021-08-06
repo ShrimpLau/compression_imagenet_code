@@ -696,7 +696,7 @@ def test_gloo_gather(args):
         # if dist.get_rank() == 0:
         world_size = dist.get_world_size()
         accum_list = [torch.zeros_like(tensor_rand) for i in range(world_size)] 
-        if rank == 0:
+        if dist.get_rank() == 0:
             dist.gather(tensor_rand, accum_list)
         else:
             dist.gather(tensor_rand)
