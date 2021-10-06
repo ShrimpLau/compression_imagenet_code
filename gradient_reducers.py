@@ -869,70 +869,75 @@ class MsTopKReducer(Reducer):
         self.k = k
         self.N = 100
     def reduce(self, grad_in, grad_out):
-        start_time = torch.cuda.Event(enable_timing=True)
-        stop_time = torch.cuda.Event(enable_timing=True)
-        start.record()
-        grad_in = list_to_tensor(grad_in)
-        grad_1d = grad_in.reshape(-1) #reshaping to 1d
-        k = int(self.k*len(grad_1d)) #change percent to actual number
-        a = torch.abs(grad_1d)
-        a_hat = torch.mean(a)
-        u = torch.max(a)
-        l = 0
-        r = 1
-        k1 = 0
-        k2 = len(grad_1d)
-        thres1 = 0
-        thres2 = 0
-        for i in range(self.N):
-            ratio = l + (r-l)/2
-            thres = a_hat + ratio*(u-a_hat)
-            nnz = torch.count_nonzero(a >= thres)
-            if nnz <= k:
-                r = ratio
-                if nnz > k1:
-                    k1 = nnz
-                    thres1 = thres
-            elif nnz > k:
-                l= ratio
-                if nnz < k2:
-                    k2 = nnz
-                    thres2 = thres
-        l1 = torch.nonzero(a>= thres1, as_tuple=True)[0] #since 1d no problem
-        l2 = torch.nonzero((a<thres1) & (a >= thres2), as_tuple=True)[0]
+        torch.cuda.nvtx.range_push("test")
+        s = torch.cuda.Stream()
+        with torch.cuda.stream(s):
+            start_time = torch.cuda.Event(enable_timing=True)
+            stop_time = torch.cuda.Event(enable_timing=True)
+            start.record()
+            grad_in = list_to_tensor(grad_in)
+            grad_1d = grad_in.reshape(-1) #reshaping to 1d
+            k = int(self.k*len(grad_1d)) #change percent to actual number
+            a = torch.abs(grad_1d)
+            a_hat = torch.mean(a)
+            u = torch.max(a)
+            l = 0
+            r = 1
+            k1 = 0
+            k2 = len(grad_1d)
+            thres1 = 0
+            thres2 = 0
+            for i in range(self.N):
+                ratio = l + (r-l)/2
+                thres = a_hat + ratio*(u-a_hat)
+                nnz = torch.count_nonzero(a >= thres)
+                if nnz <= k:
+                    r = ratio
+                    if nnz > k1:
+                        k1 = nnz
+                        thres1 = thres
+                elif nnz > k:
+                    l= ratio
+                    if nnz < k2:
+                        k2 = nnz
+                        thres2 = thres
+            l1 = torch.nonzero(a>= thres1, as_tuple=True)[0] #since 1d no problem
+            l2 = torch.nonzero((a<thres1) & (a >= thres2), as_tuple=True)[0]
 
-        if len(l2)-(k-k1)+1 < 0:
-            l = torch.cat((l1, l2[0:k-len(l1)]))
-            # print("Fake if")
-        else:
-            rand = random.randint(0, len(l2)-(k-k1)+1)
-            l = torch.cat((l1, l2[rand:rand+k-k1]))
-            # print ("Actual if")
-        kai = grad_1d[l]
-        stop_time.record()
-        print ("Time taken {}".format(start_time.elapsed_time(stop_time)))
-        kai = torch.zeros((k), device=kai.device, dtype=kai.dtype)
-        l = torch.zeros((k), device=l.device, dtype=l.dtype)
-        index_list = [torch.zeros_like(l, device=l.device, dtype=l.dtype) for _ in range(self.n_workers)]
-        ind_wait = torch.distributed.all_gather(index_list, l, async_op=True)
-        value_list = [torch.zeros_like(kai, device=kai.device, dtype=kai.dtype) for _ in range(self.n_workers)]
-        val_wait = torch.distributed.all_gather(value_list, kai, async_op=True)
-        ind_wait.wait()
-        val_wait.wait()
+            if len(l2)-(k-k1)+1 < 0:
+                l = torch.cat((l1, l2[0:k-len(l1)]))
+                # print("Fake if")
+            else:
+                rand = random.randint(0, len(l2)-(k-k1)+1)
+                l = torch.cat((l1, l2[rand:rand+k-k1]))
+                # print ("Actual if")
+            kai = grad_1d[l]
+            stop_time.record()
+            print ("Time taken {}".format(start_time.elapsed_time(stop_time)))
+            kai = torch.zeros((k), device=kai.device, dtype=kai.dtype)
+            l = torch.zeros((k), device=l.device, dtype=l.dtype)
+            index_list = [torch.zeros_like(l, device=l.device, dtype=l.dtype) for _ in range(self.n_workers)]
+            ind_wait = torch.distributed.all_gather(index_list, l, async_op=True)
+            value_list = [torch.zeros_like(kai, device=kai.device, dtype=kai.dtype) for _ in range(self.n_workers)]
+            val_wait = torch.distributed.all_gather(value_list, kai, async_op=True)
+            ind_wait.wait()
+            val_wait.wait()
 
-        grad_accum = torch.zeros_like(grad_1d)
-        for idx, vals in zip(index_list, value_list):
-            grad_accum[idx] += vals
-        
-        # print ("Starting element copy") 
-        # start_index = 0
-        # for idx, ts in enumerate(grad_out):
-            # num_element_ts = grad_out[idx].numel()
-            # ts = grad_accum[start_index:start_index+num_element_ts]
-            # grad_out[idx] = ts
-            # start_index += num_element_ts
-        # print ("Done element copy")
-        # grad_out = grad_1.reshape(grad_in.shape)
+            grad_accum = torch.zeros_like(grad_1d)
+            for idx, vals in zip(index_list, value_list):
+                grad_accum[idx] += vals
+            
+            torch.cuda.nvtx.range_pop()
+            # print ("Starting element copy") 
+            # start_index = 0
+            # for idx, ts in enumerate(grad_out):
+                # num_element_ts = grad_out[idx].numel()
+                # ts = grad_accum[start_index:start_index+num_element_ts]
+                # grad_out[idx] = ts
+                # start_index += num_element_ts
+            # print ("Done element copy")
+            # grad_out = grad_1.reshape(grad_in.shape)
+        s.synchronize()
         return grad_out
 
 
