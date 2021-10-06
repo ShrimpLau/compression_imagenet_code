@@ -751,8 +751,8 @@ def different_comm(args, bsize):
         start_time.record() 
         grad_list = [p.grad for p in model.parameters()]
         for g in grad_list:
-            compressed_vals = reducer.compress(g, "temp")
-            ret_val = reducer.decompress(compressed_vals, g.shape)
+            compressed_vals, shape = reducer.compress(g, "temp")
+            ret_val = reducer.decompress(compressed_vals, shape)
 
         stop_time.record() 
         torch.cuda.synchronize()
