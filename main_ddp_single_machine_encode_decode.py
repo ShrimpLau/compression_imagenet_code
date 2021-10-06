@@ -18,7 +18,7 @@ import torchvision.models as models
 from torch.autograd import Variable
 
 import gradient_reducers
-import grad_reducers_grace
+import grad_reducers_grace as grad_reducers
 import s3_utils
 from timer import Timer
 
